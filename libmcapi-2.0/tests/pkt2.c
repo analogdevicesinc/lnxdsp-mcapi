@@ -41,7 +41,7 @@ void do_child()
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
-	char send_string[] = "mcapi_pkt1";
+	char send_string[] = "mcapi_pkt_2_process";
 
 	mcapi_uint_t avail;
 	int s;
@@ -89,7 +89,7 @@ void do_child()
         sprintf(send_buf, "CHILD %s %d", send_string, s);
         mcapi_pktchan_send_i(s1,send_buf,32,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-        printf("coreA: The %d time sending, status %d\n",s, status);
+        printf("coreA child: The %d time sending, status %d\n",s, status);
 
         }
 
@@ -116,10 +116,11 @@ void do_parent(int pid)
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s0;
+        mcapi_sclchan_recv_hndl_t r1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
-	char send_string[] = "mcapi_pkt1";
+	char send_string[] = "mcapi_pkt_2_process";
 	int stat_val;
-
+        void *pbuffer = NULL;
 	mcapi_uint_t avail;
 	int s;
 	int i;
@@ -163,7 +164,7 @@ void do_parent(int pid)
         sprintf(send_buf0, "PARENT %s %d", send_string, s);
         mcapi_pktchan_send_i(s0,send_buf0,32,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-        printf("coreA: The %d time sending, status %d\n",s, status);
+        printf("coreA parent: The %d time sending, status %d\n",s, status);
 
         }
 
@@ -172,7 +173,7 @@ void do_parent(int pid)
         mcapi_pktchan_send_close_i(s0,&request,&status); 
         printf("status %d\n", status);
 	
-# if 0 
+# if 1 
 
   mcapi_pktchan_recv_open_i(&r1 /*recv_handle*/,ep1, &request, &status);
   printf("status %d\n", status);

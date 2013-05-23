@@ -65,7 +65,7 @@ void do_child()
 
 	mcapi_uint_t avail;
 	int s;
-	int i;
+	int i,rc;
 	int fd;
 	char *send_buf = malloc(64);
 	if (!send_buf)
@@ -107,6 +107,22 @@ void do_child()
      
         }
 
+#if 1
+  rc = 0;
+  while (1) {
+	avail = mcapi_msg_available(ep2, &status);
+	if (avail > 0) {
+		recv (ep2,status,MCAPI_SUCCESS);
+  		if (status != MCAPI_SUCCESS) { WRONG }
+                printf("CoreA child : message recv. The %d time receiving ok, status %i\n", rc, status);
+
+		if (rc == (NUM_SIZES - 1))
+                	break;
+                rc++;
+	}
+	sleep(2);
+  }
+#endif
 	sleep(5);
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
@@ -119,19 +135,18 @@ void do_child()
         _exit(0);
 }
 
-void do_parent()
+void do_parent(int pid)
 {
 	mcapi_status_t status;
 	mcapi_param_t parms;
 	mcapi_info_t version;
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
-	mcapi_boolean_t rc = MCAPI_FALSE;
 	char send_string[] = "HELLO MCAPI";
-
+        int stat_val;
 	mcapi_uint_t avail;
 	int s;
-	int i;
+	int i,rc;
 	int fd;
 	char *send_buf0 = malloc(64);
 	if (!send_buf0)
@@ -171,14 +186,14 @@ void do_parent()
      
         }
 
-#if 0
+#if 1
   rc = 0;
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
 	if (avail > 0) {
 		recv (ep1,status,MCAPI_SUCCESS);
   		if (status != MCAPI_SUCCESS) { WRONG }
-                printf("CoreA : message recv. The %d time receiving ok, status %i\n", rc, status);
+                printf("CoreA parent: message recv. The %d time receiving ok, status %i\n", rc, status);
 
 		if (rc == (NUM_SIZES - 1))
                 	break;
@@ -187,6 +202,12 @@ void do_parent()
 	sleep(2);
   }
 #endif
+
+        waitpid(pid, &stat_val, 0);
+	if (WIFEXITED(stat_val))
+		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
+	else if (WIFSIGNALED(stat_val))
+		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
 
 	sleep(5);
         mcapi_endpoint_delete(ep1,&status);
@@ -213,7 +234,6 @@ int main (int ac, char **av) {
 	mcapi_uint_t avail;
 	int s;
 	int i;
-	mcapi_boolean_t rc = MCAPI_FALSE;
 
 	int parentpid, childpid;
 	char opt;
@@ -242,13 +262,8 @@ int main (int ac, char **av) {
  
 	int stat_val;
 
-	do_parent();	
+	do_parent(childpid);	
 
-        waitpid(childpid, &stat_val, 0);
-	if (WIFEXITED(stat_val))
-		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
-	else if (WIFSIGNALED(stat_val))
-		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
 
 	printf("Parent   Test PASSED\n");
 
