@@ -8,7 +8,7 @@ CFLAGS  += -I$(PWD)/../include
 PWD:= $(shell pwd)
 LIB:=$(PWD)/../.libs/libmcapi.a
 
-all: endpoints1 msg1
+all: endpoints1 msg1 pkt1
 
 endpoints1: endpoints1.o $(LIB)
 	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map

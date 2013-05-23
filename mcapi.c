@@ -839,6 +839,53 @@ void mcapi_pktchan_free(
   }
 }
 
+void mcapi_pktchan_recv_close_i(
+		MCAPI_IN mcapi_pktchan_recv_hndl_t receive_handle, 
+		MCAPI_OUT mcapi_request_t* request, 
+		MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+
+	if (! valid_status_param(mcapi_status)) {
+		if (mcapi_status != NULL) {
+			*mcapi_status = MCAPI_EPARAM;
+		}
+	} else {
+		*mcapi_status = MCAPI_SUCCESS;  
+		if (! valid_request_param(request)) {
+			*mcapi_status = MCAPI_EPARAM;
+		} else if (! mcapi_trans_valid_pktchan_recv_handle(receive_handle) ) {
+			*mcapi_status = MCAPI_ENOT_HANDLE;
+		} else if (! mcapi_trans_pktchan_recv_isopen (receive_handle)) {
+			*mcapi_status = MCAPI_ENOT_OPEN;
+		}
+		mcapi_trans_pktchan_recv_close_i (receive_handle,request,mcapi_status);
+	}
+}
+
+void mcapi_pktchan_send_close_i(
+		MCAPI_IN mcapi_pktchan_send_hndl_t send_handle, 
+		MCAPI_OUT mcapi_request_t* request, 
+		MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+	if (! valid_status_param(mcapi_status)) {
+		if (mcapi_status != NULL) {
+			*mcapi_status = MCAPI_EPARAM;
+		}
+	} else {
+		*mcapi_status = MCAPI_SUCCESS;
+		if (! mcapi_trans_valid_pktchan_recv_handle(send_handle) ) {
+			*mcapi_status = MCAPI_ENOT_HANDLE;
+		} else if (! mcapi_trans_pktchan_send_isopen (send_handle)) {
+			*mcapi_status = MCAPI_ENOT_OPEN;
+		} if (! valid_request_param(request)) {
+			*mcapi_status = MCAPI_EPARAM;
+		}  
+		mcapi_trans_pktchan_send_close_i (send_handle,request,mcapi_status);
+	}
+}
+
+
+
 void  mcapi_connect_sclchan_i(
         MCAPI_IN mcapi_endpoint_t send_endpoint, 
         MCAPI_IN mcapi_endpoint_t receive_endpoint, 

@@ -13,5 +13,6 @@
 
 #define SLAVE_NODE_NUM 1
 #define SLAVE_PORT_NUM1 5
+#define SLAVE_PORT_NUM2 6
 #endif
 
