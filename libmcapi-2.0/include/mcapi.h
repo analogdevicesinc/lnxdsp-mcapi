@@ -60,6 +60,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define MCAPI_MAX_STATUS_SIZE 32
 
+#define MCAPI_DOMAIN_MASK 0xFFUL
+#define MCAPI_DOMAIN_SHIFT 24
+#define MCAPI_NODE_MASK 0xFFUL
+#define MCAPI_NODE_SHIFT 16
+#define MCAPI_PORT_MASK 0xFFFFUL
+#define MCAPI_PORT_SHIFT 0
+
 /*
  * MCAPI type definitions
  * (Additional typedefs under the attribute and initialization sections below)

@@ -436,14 +436,23 @@ mcapi_endpoint_t mcapi_endpoint_create(
     *mcapi_status = MCAPI_SUCCESS;
     mcapi_domain_t domain_id = mcapi_domain_id_get(&status);
     if (status != MCAPI_SUCCESS) {
+      printf("%s() %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_ERR_NODE_NOTINIT;
     } else if (mcapi_trans_endpoint_exists (domain_id,port_id)) {
+
+      printf("%s() %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_ERR_ENDP_EXISTS;
     } else if (mcapi_trans_num_endpoints (domain_id) == MCAPI_MAX_ENDPOINTS) {
+
+      printf("%s() %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_ERR_ENDP_LIMIT;
     } else if (!mcapi_trans_valid_port(port_id)) {
+
+      printf("%s() %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_ERR_PORT_INVALID;  
     } else if (!mcapi_trans_endpoint_create(&e,port_id,MCAPI_FALSE))  {
+
+      printf("%s() %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_ERR_ENDP_NOPORTS;
     }
   
