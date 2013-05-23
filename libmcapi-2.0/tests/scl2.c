@@ -161,6 +161,16 @@ void do_parent()
 	int sizes[NUM_SIZES] = {8,16,32,64};
 	uint64_t test_pattern = 0x9383736353433323ULL;
 	size_t size;
+	int fd;
+
+	fd = open("/tmp/parent.log", O_CREAT | O_RDWR, 0666);
+	if (fd < 0)
+		{ WRONG };
+
+	if (dup2(fd, STDOUT_FILENO) == -1) {
+		WRONG;
+	}
+	close(fd);
 
 	/* create a node */
 	mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
@@ -244,6 +254,7 @@ int main (int ac, char **av) {
 
 	do_parent();	
 
+	printf("Parent  wait child process\n");
         waitpid(childpid, &stat_val, 0);
 	if (WIFEXITED(stat_val))
 		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
