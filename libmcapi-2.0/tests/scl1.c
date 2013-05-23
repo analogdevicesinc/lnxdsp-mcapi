@@ -113,7 +113,6 @@ int main () {
 
 
 
-
 	/*************************** connect the channels *********************/
 	mcapi_sclchan_connect_i(ep1,ep3,&request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
@@ -121,7 +120,7 @@ int main () {
 	mcapi_sclchan_connect_i(ep2,ep4,&request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
-	/*************************** open the channels *********************/
+	/*************************** open the send channels *********************/
 	mcapi_sclchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
@@ -137,13 +136,17 @@ int main () {
 
 	mcapi_sclchan_send_close_i(s1,&request,&status); 
 
+	/*************************** close the send channels *********************/
+	/*************************** open the recv channels *********************/
+
 	mcapi_sclchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
 
 	s = 0;
 	while (1) {
 		avail = mcapi_sclchan_available(r1, &status);
 		if (avail > 0) {
-			recv(r1,sizes[s++],status, MCAPI_SUCCESS, test_pattern);
+			rc = recv(r1,sizes[s++],status, MCAPI_SUCCESS, test_pattern);
+			if (!rc) {WRONG}
 			if ( s == NUM_SIZES )
 			break;
 		}
@@ -151,6 +154,15 @@ int main () {
 	}
 	mcapi_sclchan_recv_close_i(r1,&request,&status); 
  
+	/*************************** close the recv channels *********************/
+	printf("Start to delete endpoint\n");
+
+	mcapi_endpoint_delete(ep1,&status);
+	mcapi_endpoint_delete(ep2,&status);
+	mcapi_endpoint_delete(ep3,&status);
+	mcapi_endpoint_delete(ep4,&status);
+
+	printf("Endpoint deleted\n");
 	mcapi_finalize(&status);
 
 	printf("CoreA Test PASSED\n");

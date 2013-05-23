@@ -13,7 +13,7 @@
 #include <string.h>
 #include <mcapi_impl_spec.h>
 
-
+#define NUM_SIZES 100
 #define BUFF_SIZE 64
 #define DOMAIN 0
 #define NODE 0
@@ -35,7 +35,7 @@ int main () {
   mcapi_endpoint_t ep1,ep2,ep3,ep4;
   mcapi_pktchan_send_hndl_t s1; /* s1 = ep1->ep3 */
   mcapi_pktchan_recv_hndl_t r1; /* r1 = ep4->ep2 */
-  int i = 0;
+  int i = 0,s;
   int rc = 1;
   mcapi_status_t status;
   mcapi_request_t request;
@@ -73,9 +73,14 @@ int main () {
   mcapi_pktchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
   printf("status %d\n", status);
 
+  for (s = 0; s < NUM_SIZES; s++) {
+
   printf("pktchan send i\n");
   mcapi_pktchan_send_i(s1,send_buf,32,&request,&status);
-  printf("status %d\n", status);
+  if (status != MCAPI_SUCCESS) { WRONG }
+  printf("coreA: The %d time sending, status %d\n",s, status);
+
+  }
 
   printf("close pktchan send\n");
   /* close the channels */
@@ -90,17 +95,24 @@ int main () {
 	  avail = mcapi_pktchan_available(r1, &status);
 	  if (avail > 0) {
 		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
-		  printf("pktchan recv on coreA ok buffer %s, status %d\n",pbuffer,status);
+  		  if (status != MCAPI_SUCCESS) { WRONG }
+		  printf("CoreA :pktchan recv on coreA ok buffer %s, The %d time receiving ok, status %i\n",pbuffer, rc, status);
 		  mcapi_pktchan_release(pbuffer, &status);
-		  rc = 0;
+		  
+		  if (rc == NUM_SIZES)
 		  break;
+		  rc++;
 	  }
 	  sleep(2);
   }
 
+  mcapi_endpoint_delete(ep1,&status);
+  mcapi_endpoint_delete(ep2,&status);
+  mcapi_endpoint_delete(ep3,&status);
+  mcapi_endpoint_delete(ep4,&status);
 
   mcapi_finalize(&status);
-  if (rc == 0) {
+  if (rc == NUM_SIZES) {
     printf("   Test PASSED\n");
   } else {
     printf("   Test FAILED\n");
