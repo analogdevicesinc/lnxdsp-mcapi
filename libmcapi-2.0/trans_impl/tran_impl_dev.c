@@ -219,6 +219,33 @@ int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_
 	return ret;
 }
 
+void *sm_request_uncached_buf(uint32_t size, uint32_t *paddr)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(struct sm_packet));
+	pkt.type = CMD_SM_REQUEST_UNCACHED_BUF;
+	pkt.buf_len = size;
+	ret = ioctl(fd, CMD_SM_REQUEST_UNCACHED_BUF, &pkt);
+	if (ret)
+		return NULL;
+	if (paddr)
+		*paddr = pkt.paddr;
+
+	return pkt.buf;
+}
+
+int sm_release_uncached_buf(void *buf, uint32_t size, uint32_t paddr)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(struct sm_packet));
+	pkt.type = CMD_SM_RELEASE_UNCACHED_BUF;
+	pkt.buf_len = size;
+	pkt.buf = buf;
+	pkt.paddr = paddr;
+	ret = ioctl(fd, CMD_SM_GET_SESSION_STATUS, &pkt);
+	return ret;
+}
+
 void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
 		mcapi_endpoint_t receive_endpoint,channel_type type)
 {
