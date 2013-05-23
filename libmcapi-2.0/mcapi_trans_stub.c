@@ -556,7 +556,15 @@ mcapi_boolean_t mcapi_trans_valid_endpoints(mcapi_endpoint_t endpoint1,
 /* checks if the channel is open for a given endpoint */
 mcapi_boolean_t mcapi_trans_endpoint_channel_isopen (mcapi_endpoint_t endpoint)
 {
-  return MCAPI_TRUE;
+	uint16_t d,n,e;
+	int index;
+	assert(mcapi_trans_decode_handle_internal(endpoint,&d,&n,&e));
+	index = mcapi_trans_get_port_index(n, e);
+	if (index >= MCAPI_MAX_ENDPOINTS) {
+		return MCAPI_FALSE;
+	}
+
+	return c_db->domains[0].nodes[0].node_d.endpoints[index].open;
 }
 
 
@@ -564,7 +572,7 @@ mcapi_boolean_t mcapi_trans_endpoint_channel_isopen (mcapi_endpoint_t endpoint)
 /* checks if the channel is open for a given pktchan receive handle */
 mcapi_boolean_t mcapi_trans_pktchan_recv_isopen (mcapi_pktchan_recv_hndl_t receive_handle) 
 {
-  return MCAPI_FALSE;
+	return mcapi_trans_endpoint_channel_isopen((mcapi_endpoint_t)receive_handle);
 }
 
 
@@ -572,7 +580,7 @@ mcapi_boolean_t mcapi_trans_pktchan_recv_isopen (mcapi_pktchan_recv_hndl_t recei
 /* checks if the channel is open for a given pktchan send handle */
 mcapi_boolean_t mcapi_trans_pktchan_send_isopen (mcapi_pktchan_send_hndl_t send_handle) 
 {
-  return MCAPI_FALSE;
+	return mcapi_trans_endpoint_channel_isopen((mcapi_endpoint_t)send_handle);
 }
 
 
@@ -580,7 +588,7 @@ mcapi_boolean_t mcapi_trans_pktchan_send_isopen (mcapi_pktchan_send_hndl_t send_
 /* checks if the channel is open for a given sclchan receive handle */
 mcapi_boolean_t mcapi_trans_sclchan_recv_isopen (mcapi_sclchan_recv_hndl_t receive_handle) 
 {
-  return MCAPI_FALSE;
+	return mcapi_trans_endpoint_channel_isopen((mcapi_endpoint_t)receive_handle);
 }
 
 
@@ -588,7 +596,7 @@ mcapi_boolean_t mcapi_trans_sclchan_recv_isopen (mcapi_sclchan_recv_hndl_t recei
 /* checks if the channel is open for a given sclchan send handle */
 mcapi_boolean_t mcapi_trans_sclchan_send_isopen (mcapi_sclchan_send_hndl_t send_handle) 
 {
-  return MCAPI_FALSE;
+	return mcapi_trans_endpoint_channel_isopen((mcapi_endpoint_t)send_handle);
 }
 
 
@@ -596,7 +604,7 @@ mcapi_boolean_t mcapi_trans_sclchan_send_isopen (mcapi_sclchan_send_hndl_t send_
 /* checks if the given endpoint is owned by the given node */
 mcapi_boolean_t mcapi_trans_endpoint_isowner (mcapi_endpoint_t endpoint)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
