@@ -30,29 +30,224 @@ notice, this list of conditions and the following disclaimer.
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TRANSPORT_H
-#define TRANSPORT_H
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
+
+#include <errno.h>
 
 #include <mcapi.h>
+#include <transport_sm.h>
 
-/* This is a sample stub of the transport layer.  To define a specific implementation,
-   you would copy this file and fill in the functions. You would also need to define
-   datatypes for the handles defined in mcapi.h */
+#include <icc.h>
 
-mcapi_uint_t mcapi_trans_get_node_num()
-{
-  return 0;
+#define SEMKEYPATH "/dev/null"  /* Path used on ftok for semget key  */
+#define SEMKEYID 1              /* Id used on ftok for semget key    */
+#define SHMKEYPATH "/dev/null"  /* Path used on ftok for shmget key  */
+#define SHMKEYID 2              /* Id used on ftok for shmget key    */
+#define MAGIC_NUM 0xdeadcafe
+
+/* the semaphore id */
+uint32_t sem_id;
+/* the shared memory address */
+void* shm_addr;
+/* the shared memory database */
+mcapi_database* c_db = NULL;
+
+/* the debug level */
+int mcapi_debug = 0;
+
+
+
+/* semaphore management */
+uint32_t transport_sm_create_semaphore(uint32_t semkey) {
+	int sem_id;
+	union semun {
+		int              val;    /* Value for SETVAL */
+		struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+		unsigned short  *array;  /* Array for GETALL, SETALL */
+		struct seminfo  *__buf;  /* Buffer for IPC_INFO
+					    (Linux-specific) */
+	} arg;
+
+	arg.val = 1;
+	if((sem_id = semget(semkey, 1, IPC_CREAT|IPC_EXCL|0666)) == -1)  {
+		return -1;
+	} else {
+		if (semctl(sem_id, 0, SETVAL, arg) == -1)
+			return -1;
+	}
+	return sem_id;
 }
 
-mcapi_boolean_t mcapi_trans_set_node_num(mcapi_uint_t node_num)
+mcapi_boolean_t transport_sm_lock_semaphore(uint32_t semid)
 {
-  return MCAPI_FALSE;
+	struct sembuf sem_lock={ 0, -1, 0}; 
+	if((semop(sem_id, &sem_lock, 1)) == -1) {
+		return -1;
+	}
+	return 0;
 }
 
-mcapi_boolean_t mcapi_trans_endpoint_exists(mcapi_uint_t node_num)
+mcapi_boolean_t transport_sm_unlock_semaphore(uint32_t semid)
 {
-  return MCAPI_FALSE;
+	struct sembuf sem_unlock={ 0, 1, 0};
+	/* Attempt to unlock the semaphore set */
+	if((semop(sem_id, &sem_unlock, 1)) == -1) {
+		return -1;
+	}
+
+	return 0;
 }
+
+void* sm_attach_shared_mem(uint32_t shmid){ 
+	void *shm_addr;
+	int rval;
+	struct shmid_ds dsbuf;
+
+	shm_addr = shmat(shmid, 0, 0);
+	if ((long)shm_addr == (-1)) {
+		return NULL;
+	}
+	rval = shmctl(shmid, IPC_STAT, &dsbuf);
+	if (rval != 0) {
+		shmdt(shm_addr);
+		return NULL;
+	}
+
+	/* if we are the first to attach, then initialize the segment to 0 */
+	if (dsbuf.shm_nattch == 1) {
+		memset(shm_addr,0,dsbuf.shm_segsz);
+	}
+	return shm_addr;
+}
+
+/* shared memory management */
+mcapi_boolean_t transport_sm_create_shared_mem(void** addr,uint32_t shmkey,uint32_t size) 
+{
+	uint32_t shmid = shmget(shmkey, size, 0666 | IPC_CREAT | IPC_EXCL); 
+	if (errno == EEXIST) {
+		shmid = shmget(shmkey, size, 0666 | IPC_CREAT); 
+	}
+
+	if (shmid == -1) {
+		return MCAPI_FALSE;
+	}  else {
+		*addr = sm_attach_shared_mem(shmid);
+		return MCAPI_TRUE;
+	}
+}
+
+mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
+{
+	struct shmid_ds shmid_struct;
+
+	/* detach the shared memory segment */
+	int rc = shmdt(shm_address);
+	if (rc==-1) {
+		mrapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmdt() failed\n");
+		return MCAPI_FALSE;
+	}
+
+	/* delete the shared memory id */
+	rc = shmctl(shmid, IPC_RMID, &shmid_struct);
+	if (rc==-1)  {
+		mcapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmctl() failed\n");
+		return MCAPI_FALSE;
+	}
+	return MCAPI_TRUE;
+
+}
+
+mcapi_boolean_t mcapi_trans_add_node (mcapi_uint_t node_num) 
+{
+	mcapi_boolean_t rc = MCAPI_TRUE;
+
+	/* lock the database */
+	mcapi_trans_access_database_pre_nocheck();
+
+	/* mcapi should have checked that the node doesn't already exist */
+
+	if (c_db->num_nodes == MAX_NODES) {
+		rc = MCAPI_FALSE;
+	}
+
+	if (rc) {
+		/* setup our local (private data) */
+		/* we do this while we have the lock because we don't want an inconsistency/
+		   race condition where the node exists in the database but not yet in
+		   the transport layer's cached state */
+		mcapi_trans_set_node_num(node_num);
+
+		/* add the node */
+		c_db->nodes[c_db->num_nodes].finalized = MCAPI_FALSE;  
+		c_db->nodes[c_db->num_nodes].valid = MCAPI_TRUE;  
+		c_db->nodes[c_db->num_nodes].node_num = node_num;
+		c_db -> num_nodes++;
+	}
+
+	/* unlock the database */
+	mcapi_trans_access_database_post_nocheck();
+
+	return rc;
+}
+
+/***************************************************************************
+NAME:mcapi_trans_encode_handle_internal 
+DESCRIPTION:
+Our handles are very simple - a 32 bit integer is encoded with 
+an index (16 bits gives us a range of 0:64K indices).
+Currently, we only have 2 indices for each of: node array and
+endpoint array.
+PARAMETERS: 
+node_index -
+endpoint_index -
+RETURN VALUE: the handle
+ ***************************************************************************/
+uint32_t mcapi_trans_encode_handle_internal (uint16_t node_index,uint16_t endpoint_index) 
+{
+	/* The database should already be locked */
+	uint32_t handle = 0;
+	uint8_t shift = 16;
+
+	assert ((node_index < MAX_NODES) && (endpoint_index < MAX_ENDPOINTS));
+
+	handle = node_index;
+	handle <<= shift;
+	handle |= endpoint_index;
+
+	return handle;
+}
+
+/***************************************************************************
+NAME:mcapi_trans_decode_handle_internal
+DESCRIPTION: Decodes the given handle into it's database indices
+PARAMETERS: 
+handle -
+node_index -
+endpoint_index -
+RETURN VALUE: true/false indicating success or failure
+ ***************************************************************************/
+mcapi_boolean_t mcapi_trans_decode_handle_internal (uint32_t handle, uint16_t *node_index,
+		uint16_t *endpoint_index) 
+{
+	int rc = MCAPI_FALSE;
+	uint8_t shift = 16;
+
+	/* The database should already be locked */
+	*node_index              = (handle & 0xffff0000) >> shift;
+	*endpoint_index          = (handle & 0x0000ffff);
+
+	if ((*node_index < MAX_NODES) && (*endpoint_index < MAX_ENDPOINTS) &&
+			(c_db->nodes[*node_index].node_d.endpoints[*endpoint_index].valid)) {
+		rc = MCAPI_TRUE;
+	}
+
+	return rc;
+}
+
+
 
 /****************** error checking queries *************************/
 /* checks if the given node is valid */
@@ -235,10 +430,46 @@ mcapi_boolean_t valid_size_param (size_t* size)
 }
 
 /****************** initialization *************************/
+mcapi_boolean_t mcapi_trans_initialize_() 
+{
+	int semkey = ftok(SEMKEYPATH,SEMKEYID);
+	int shmkey = 0;
+	mcapi_boolean_t rc = MCAPI_TRUE;
+
+	if (!sem_id) {
+		/* create the semaphore (it may already exist) */
+		sem_id =  transport_sm_create_semaphore(semkey);
+		if (!sem_id) {
+			return MCAPI_FALSE;
+		}
+	}  
+
+	/* lock the database */
+	transport_sm_lock_semaphore(sem_id);
+
+	if (c_db == NULL) {
+		/* create the shared memory (it may already exist) */
+		shmkey = ftok(SEMKEYPATH,SEMKEYID);
+		transport_sm_create_shared_mem(&shm_addr,shmkey,sizeof(mcapi_database));  
+
+		if (!shm_addr) {
+			return MCAPI_FALSE;
+		}
+
+		c_db = shm_addr; 
+	}
+	transport_sm_unlock_semaphore(sem_id);
+	return MCAPI_TRUE;
+}
+
 /* initialize the transport layer */
 mcapi_boolean_t mcapi_trans_initialize(mcapi_uint_t node_num)
 {
-  return MCAPI_FALSE;
+	if (mcapi_trans_initialize_()) {
+		mcapi_trans_add_node(node_num);
+		return MCAPI_TRUE;
+	}
+	return MCAPI_FALSE;
 }
 
 
@@ -246,15 +477,25 @@ mcapi_boolean_t mcapi_trans_initialize(mcapi_uint_t node_num)
 /****************** tear down ******************************/
 void mcapi_trans_finalize()
 {
+	void *shm_addr = c_db;
+	uint32_t shmkey = ftok(SEMKEYPATH,SEMKEYID);
+	uint32_t shmid = shmget(shmkey, sizeof(mcapi_database), 0666); 
+	transport_sm_free_shared_mem(shmid,shm_addr);
 }
-
 
 
 /****************** endpoints ******************************/
 /* create endpoint <node_num,port_num> and return it's handle */
 mcapi_boolean_t mcapi_trans_create_endpoint(mcapi_endpoint_t *endpoint,  mcapi_uint_t port_num,mcapi_boolean_t anonymous)
 {
-  return MCAPI_FALSE;
+	int node_index = mcapi_trans_get_node_index(0);
+	int index = sm_create_session(port_num, SP_SESSION_PACKET);
+	assert(index >= 0);
+	if (index < 0) {
+		return index;
+	}
+	*endpoint = mcapi_trans_encode_handle_internal(node_index,index);
+	return MCAPI_FALSE;
 }
 
 
@@ -278,6 +519,9 @@ mcapi_boolean_t mcapi_trans_get_endpoint(mcapi_endpoint_t *endpoint,mcapi_uint_t
 /* delete the given endpoint */
 void mcapi_trans_delete_endpoint( mcapi_endpoint_t endpoint)
 {
+	uint16_t sn,se;
+	assert(mcapi_trans_decode_handle_internal(endpoint,&sn,&se));
+	sm_destroy_session(se);
 }
 
 
@@ -300,6 +544,18 @@ void mcapi_trans_set_endpoint_attribute( mcapi_endpoint_t endpoint, mcapi_uint_t
 /****************** msgs **********************************/
 void mcapi_trans_msg_send_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  receive_endpoint, char* buffer, size_t buffer_size, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t sn,se;
+	uint16_t rn,re;
+	int ret;
+	int index;
+	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
+
+	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+
+	index = se;
+	ret = sm_send_packet(index, re, rn, buffer, buffer_size);
+
 }
 
 
@@ -313,6 +569,17 @@ mcapi_boolean_t mcapi_trans_msg_send( mcapi_endpoint_t  send_endpoint, mcapi_end
 
 void mcapi_trans_msg_recv_i( mcapi_endpoint_t  receive_endpoint,  char* buffer, size_t buffer_size, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t sn,se;
+	uint16_t rn,re;
+	int ret;
+	int index;
+	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
+
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+
+	index = re;
+	ret = sm_recv_packet(index, buffer, buffer_size);
+
 }
 
 
@@ -483,6 +750,3 @@ void mcapi_trans_cancel( mcapi_request_t* request)
 }
 
 
-
-
-#endif
