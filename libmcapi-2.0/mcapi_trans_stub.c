@@ -1146,7 +1146,6 @@ void mcapi_trans_msg_recv_i( mcapi_endpoint_t  receive_endpoint,  char* buffer, 
 		return;
 	} else {
 	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
-	mcapi_dprintf(1,"buffer %s\n", buffer);
 		*mcapi_status = MCAPI_SUCCESS;
 	}
 
@@ -1333,7 +1332,6 @@ void mcapi_trans_pktchan_recv_i( mcapi_pktchan_recv_hndl_t receive_handle,  void
 		return;
 	}
 	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
-	mcapi_dprintf(1,"buffer %s\n", buffer);
 
 	*buffer = db_buff->buff;
 	*mcapi_status = MCAPI_SUCCESS;
