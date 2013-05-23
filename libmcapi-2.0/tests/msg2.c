@@ -95,12 +95,13 @@ void do_child()
      
         for (s = 0; s < NUM_SIZES; s++) {
      
-        send (ep1,ep2,"Child Hello MCAPI",status,MCAPI_SUCCESS);
+        send (ep2,ep4,"Child Hello MCAPI",status,MCAPI_SUCCESS);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA: The %d time sending, status %d\n",s, status);
      
         }
 
+	sleep(5);
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
 
@@ -163,6 +164,8 @@ void do_parent()
 	sleep(2);
   }
 #endif
+
+	sleep(5);
         mcapi_endpoint_delete(ep1,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
 
