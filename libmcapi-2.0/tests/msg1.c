@@ -24,6 +24,8 @@ void wrong(unsigned line)
   fflush(stdout);
   exit(1);
 }
+char send_buf[32] = "";
+char send_string[] = "HELLO_MCAPI";
 
 void send (mcapi_endpoint_t send, mcapi_endpoint_t recv,char* msg,mcapi_status_t status,int exp_status) {
   int size = strlen(msg);
@@ -73,8 +75,8 @@ int main () {
   /* regular endpoints */
 
   for (s = 0; s < NUM_SIZES; s++) {
-
-  send (ep1,ep2,"1Hello MCAPI",status,MCAPI_SUCCESS);
+  sprintf(send_buf, "%s %d", send_string, s);
+  send (ep1,ep2,send_buf,status,MCAPI_SUCCESS);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("coreA: The %d time sending, status %d\n",s, status);
 
