@@ -71,7 +71,7 @@ mcapi_boolean_t recv (mcapi_sclchan_recv_hndl_t recv_handle,uint32_t size,mcapi_
   if (status == MCAPI_SUCCESS) {
 	  fprintf(stderr,"endpoint=%i has received %i byte(s): [%llx]!!!\n",(int)recv_handle,(int)size/8,data);
 	  if (data != exp_data) { 
-		  fprintf(stderr, "expected %lld, received %lld\n",exp_data,data); 
+		  fprintf(stderr, "expected %llx, received %llxd\n",exp_data,data); 
 		  rc = MCAPI_FALSE; 
 	  }
   }
@@ -210,6 +210,7 @@ void do_parent(int pid)
 	while (1) {
 		avail = mcapi_sclchan_available(r1, &status);
 		if (avail > 0) {
+			test_pattern = 0x1122334455667788ULL;
 			recv(r1,64,status, MCAPI_SUCCESS, test_pattern);
 			break;
 		}
@@ -231,6 +232,7 @@ void do_parent(int pid)
 	mcapi_finalize(&status);
 
 	printf("Parent   Test PASSED\n");
+	fflush(stdout);
 }
 
 
@@ -266,7 +268,7 @@ int main (int ac, char **av) {
                 default:
 			break;
 
- 	}
+ 		}
 	}
 
 	childpid = vfork();
@@ -284,5 +286,6 @@ int main (int ac, char **av) {
 
         }
 	printf("   Test PASSED\n");
+	fflush(stdout);
 	return 0;
 }
