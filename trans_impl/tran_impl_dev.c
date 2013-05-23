@@ -8,10 +8,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <mcapi.h>
+#include <transport_sm.h>
 #include <icc.h>
+#include <assert.h>
 
 struct sm_packet pkt;
 int fd;
+extern mcapi_database* c_db;
 
 int sm_dev_initialize()
 {
@@ -46,13 +49,14 @@ int sm_destroy_session(uint32_t session_idx)
 	return ret;
 }
 
-int sm_connect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu)
+int sm_connect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu, uint32_t type)
 {
 	int ret;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
+	pkt.type = type;
 	ret = ioctl(fd, CMD_SM_CONNECT, &pkt);
 	return ret;
 }
@@ -137,16 +141,16 @@ int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
 	pkt.buf = scalar0;
 	switch (size) {
 	case 1:
-		pkt.type = SM_SCALAR_READY_8;
+		pkt.type = SM_SESSION_SCALAR_READY_8;
 		break;
 	case 2:
-		pkt.type = SM_SCALAR_READY_16;
+		pkt.type = SM_SESSION_SCALAR_READY_16;
 		break;
 	case 4:
-		pkt.type = SM_SCALAR_READY_32;
+		pkt.type = SM_SESSION_SCALAR_READY_32;
 		break;
 	case 8:
-		pkt.type = SM_SCALAR_READY_64;
+		pkt.type = SM_SESSION_SCALAR_READY_64;
 		break;
 	}
 
@@ -217,4 +221,44 @@ int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_
 	if (nfree)
 		*nfree = param.nfree;
 	return ret;
+}
+
+void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
+		mcapi_endpoint_t receive_endpoint,channel_type type)
+{
+	uint16_t sn,se;
+	uint16_t rn,re;
+	int index;
+	int ret;
+	uint32_t icc_type;
+
+	/* the database should already be locked */
+
+	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+
+	index = mcapi_trans_get_port_index(sn, se);
+	if (index >= MAX_ENDPOINTS) {
+		return;
+	}
+
+	if (type == MCAPI_PKT_CHAN)
+		icc_type = SP_SESSION_PACKET;
+	else if(type == MCAPI_SCL_CHAN)
+		icc_type = SP_SESSION_SCALAR;
+	else
+		return;
+	ret = sm_connect_session(index, re, rn, icc_type);
+	if (ret) {
+		printf("%s failed\n", __func__);
+		return;
+	} else {
+		/* update the send endpoint */
+		c_db->nodes[0].node_d.endpoints[index].connected = MCAPI_TRUE;
+		c_db->nodes[0].node_d.endpoints[index].recv_endpt = receive_endpoint;
+		c_db->nodes[0].node_d.endpoints[index].type = type;
+
+		printf("%s %d connected %d\n", __func__, send_endpoint, receive_endpoint);
+	}
+
 }

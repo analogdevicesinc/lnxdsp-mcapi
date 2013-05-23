@@ -8,7 +8,7 @@ CFLAGS  += -I$(PWD)/../include
 PWD:= $(shell pwd)
 LIB:=$(PWD)/../.libs/libmcapi.a
 
-all: endpoints1 msg1 pkt1
+all: endpoints1 msg1 pkt1 scl1
 
 endpoints1: endpoints1.o $(LIB)
 	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
@@ -18,6 +18,10 @@ msg1: msg1.o $(LIB)
 
 pkt1: pkt1.o $(LIB)
 	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
+
+scl1: scl1.o $(LIB)
+	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
+
 clean:
 	rm -rf *.o *.map *.gdb 
 

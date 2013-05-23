@@ -118,21 +118,6 @@ typedef struct {
 
 
 #define WITH_DEBUG 1
-/* debug printing */
-/* Inline this (and define in header) so that it can be compiled out if WITH_DEBUG is 0 */
-inline void mcapi_dprintf(int level,const char *format, ...) {
-  if (WITH_DEBUG) {
-    va_list ap;
-    va_start(ap,format);
-    if (level <= mcapi_debug){
-      printf("MCAPI_DEBUG:");
-      /* call variatic printf */
-      vprintf(format,ap);
-    }
-    va_end(ap);
-  }
-}
-
 /*******************************************************************
   mcapi_trans function prototypes (public)
  *******************************************************************/    

@@ -59,6 +59,21 @@ void* shm_addr;
 /* the shared memory database */
 mcapi_database* c_db = NULL;
 
+
+/* debug printing */
+/* Inline this (and define in header) so that it can be compiled out if WITH_DEBUG is 0 */
+inline void mcapi_dprintf(int level,const char *format, ...) {
+	if (WITH_DEBUG) {
+		va_list ap;
+		va_start(ap,format);
+		if (level <= mcapi_debug){
+			printf("MCAPI_DEBUG:");
+			/* call variatic printf */
+			vprintf(format,ap);
+		}
+		va_end(ap);
+	}
+}
 /* the debug level */
 int mcapi_debug = 7;
 
@@ -550,25 +565,25 @@ mcapi_boolean_t mcapi_trans_compatible_endpoint_attributes  (mcapi_endpoint_t se
 /* checks if the given channel handle is valid */
 mcapi_boolean_t mcapi_trans_valid_pktchan_send_handle( mcapi_pktchan_send_hndl_t handle)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
 mcapi_boolean_t mcapi_trans_valid_pktchan_recv_handle( mcapi_pktchan_recv_hndl_t handle)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
 mcapi_boolean_t mcapi_trans_valid_sclchan_send_handle( mcapi_sclchan_send_hndl_t handle)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
 mcapi_boolean_t mcapi_trans_valid_sclchan_recv_handle( mcapi_sclchan_recv_hndl_t handle)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 mcapi_boolean_t mcapi_trans_initialized (mcapi_node_t node_id)
@@ -945,38 +960,6 @@ mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 
 
 /****************** channels general ****************************/
-void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
-		mcapi_endpoint_t receive_endpoint,channel_type type) 
-{
-	uint16_t sn,se;
-	uint16_t rn,re;
-	int index;
-	int ret;
-
-	/* the database should already be locked */
-
-	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
-	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
-
-	index = mcapi_trans_get_port_index(sn, se);
-	if (index >= MAX_ENDPOINTS) {
-		return;
-	}
-	ret = sm_connect_session(index, re, rn);
-	if (ret) {
-		mcapi_dprintf(1, "%s failed\n", __func__);
-		return;
-	} else {
-		/* update the send endpoint */
-		c_db->nodes[0].node_d.endpoints[index].connected = MCAPI_TRUE;
-		c_db->nodes[0].node_d.endpoints[index].recv_endpt = receive_endpoint;
-		c_db->nodes[0].node_d.endpoints[index].type = type;
-
-		mcapi_dprintf(1, "%s %d connected %d\n", __func__, send_endpoint, receive_endpoint);
-	}
-
-}
-
 
 /****************** pkt channels ****************************/
 void mcapi_trans_connect_pktchan_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  receive_endpoint, mcapi_request_t* request,mcapi_status_t* mcapi_status)
@@ -1299,8 +1282,8 @@ void mcapi_trans_open_sclchan_send_i( mcapi_sclchan_send_hndl_t* send_handle, mc
 			completed = MCAPI_TRUE;
 		}
 
-		mcapi_dprintf(2," mcapi_trans_open_pktchan_send_i (node_num=%d,port_num=%d) handle=%x\n",
-				c_db->nodes[0].node_num,c_db->nodes[0].node_d.endpoints[index].port_num,*send_handle);
+		mcapi_dprintf(2," mcapi_trans_open_sclchan_send_i (node_num=%d,port_num=%d) handle=%x completed %d\n",
+				c_db->nodes[0].node_num,c_db->nodes[0].node_d.endpoints[index].port_num,*send_handle, completed);
 	}
 
 }
@@ -1362,7 +1345,6 @@ mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
 {
 	uint16_t sn,se,rn,re;
 	uint32_t scalar0 = 0, scalar1 = 0;
-	uint32_t type;
 	int ret;
 	int index;
 	int rc = MCAPI_FALSE;
@@ -1370,7 +1352,13 @@ mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
 	mcapi_dprintf(2,"  mcapi_trans_sclchan_send send_handle=%x\n",send_handle);
 
 	assert(mcapi_trans_decode_handle_internal(send_handle,&sn,&se));
-	assert(mcapi_trans_decode_handle_internal(c_db->nodes[sn].node_d.endpoints[se].recv_endpt,&rn,&re));
+
+	index = mcapi_trans_get_port_index(sn, se);
+	if (index >= MAX_ENDPOINTS) {
+		return MCAPI_FALSE;;
+	}
+
+	assert(mcapi_trans_decode_handle_internal(c_db->nodes[sn].node_d.endpoints[index].recv_endpt,&rn,&re));
 	index = mcapi_trans_get_port_index(sn, se);
 	if (index >= MAX_ENDPOINTS) {
 		return MCAPI_FALSE;
@@ -1392,8 +1380,8 @@ mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
 		break;
 	}
 
-	ret = sm_send_scalar(index, re, rn, scalar0, scalar1, type);
-	if (ret) 
+	ret = sm_send_scalar(index, re, rn, scalar0, scalar1, size);
+	if (ret)
 		mcapi_dprintf(1,"send failed\n");
 	return MCAPI_TRUE;
 }
@@ -1402,6 +1390,7 @@ mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_hand
 		uint64_t *data,uint32_t size)
 {
 	uint16_t rn,re;
+	uint16_t sn,se;
 	size_t received_size;
 	uint32_t scalar0 = 0, scalar1 = 0;
 	uint32_t type;
@@ -1415,7 +1404,7 @@ mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_hand
 		return MCAPI_FALSE;
 	}
 
-	ret = sm_recv_scalar(index, re, rn, &scalar0, &scalar1, &type);
+	ret = sm_recv_scalar(index, &se, &sn, &scalar0, &scalar1, &type);
 	if (ret) {
 		mcapi_dprintf(1,"send failed\n");
 	} 
