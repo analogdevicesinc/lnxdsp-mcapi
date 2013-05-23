@@ -1,7 +1,7 @@
 INCLUDES                = -I$(top_srcdir)/include
 
 
-bin_PROGRAMS            = endpoints1 msg1 msg2 pkt1 pkt2 pkt3 scl1 scl2
+bin_PROGRAMS            = endpoints1 msg1 msg2 pkt1 pkt2 pkt3 scl1 scl2 cces_msg1
 
 endpoints1_SOURCES         = endpoints1.c
 endpoints1_LDADD           = $(top_builddir)/libmcapi.la
@@ -26,3 +26,6 @@ scl1_LDADD      = $(top_builddir)/libmcapi.la
 
 scl2_SOURCES    = scl2.c
 scl2_LDADD      = $(top_builddir)/libmcapi.la
+
+cces_msg1_SOURCES    = cces_msg1.c
+cces_msg1_LDADD      = $(top_builddir)/libmcapi.la
