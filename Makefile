@@ -1,4 +1,4 @@
-VER = libmcapi-1.0
+VER = libmcapi-2.0
 
 CFLAGS += -I$(ROOTDIR)/linux-2.6.x/drivers/staging/icc/include -I$(ROOTDIR)/linux-2.6.x/arch/blackfin/mach-bf561/include/mach
 
@@ -16,6 +16,6 @@ INSTALL_TEST_PROGRAMS := $(patsubst %.c,%,$(INSTALL_TEST_SRC))
 romfs:
 	@echo installing $(INSTALL_TEST_PROGRAMS)
 	@for x in $(INSTALL_TEST_PROGRAMS); do \
-		$(ROMFSINST) -d $(STAGEDIR)/usr/bin/$$x /usr/bin; \
+		$(ROMFSINST) -d $(STAGEDIR)/usr/bin/$$x /usr/bin/$$x; \
 	done
 
