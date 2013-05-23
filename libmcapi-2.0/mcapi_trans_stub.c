@@ -384,6 +384,7 @@ mcapi_boolean_t mcapi_trans_add_node (mcapi_domain_t domain_id, mcapi_uint_t nod
 				/* zero out all the endpoints */
 				memset (&mcapi_db->domains[d].nodes[n].node_d.endpoints[i],0,sizeof(endpoint_entry));
 			}
+			mcapi_db->domains[d].nodes[n].node_d.num_endpoints = 1;
 		} 
 	}
 	/* unlock the database */
