@@ -89,8 +89,8 @@ int main () {
   		if (status != MCAPI_SUCCESS) { WRONG }
                 printf("CoreA : message recv. The %d time receiving ok, status %i\n", rc, status);
 
-		if (rc == NUM_SIZES)
-                break;
+		if (rc == (NUM_SIZES - 1))
+                	break;
                 rc++;
 	}
 	sleep(2);
