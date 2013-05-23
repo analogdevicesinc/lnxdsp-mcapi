@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = tests
+SUBDIRS = . tests
 
 INCLUDES = -I$(top_srcdir)/include
 lib_LTLIBRARIES = libmcapi.la
