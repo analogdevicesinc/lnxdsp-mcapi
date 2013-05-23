@@ -35,7 +35,9 @@ notice, this list of conditions and the following disclaimer.
 #include <sys/sem.h>
 #include <sys/shm.h>
 
+#include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #include <mcapi.h>
 #include <transport_sm.h>
@@ -56,7 +58,7 @@ void* shm_addr;
 mcapi_database* c_db = NULL;
 
 /* the debug level */
-int mcapi_debug = 0;
+int mcapi_debug = 7;
 
 
 
@@ -146,7 +148,7 @@ mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
 	/* detach the shared memory segment */
 	int rc = shmdt(shm_address);
 	if (rc==-1) {
-		mrapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmdt() failed\n");
+		mcapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmdt() failed\n");
 		return MCAPI_FALSE;
 	}
 
@@ -160,12 +162,28 @@ mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
 
 }
 
+mcapi_boolean_t mcapi_trans_set_node_num(mcapi_uint_t n) 
+{
+	return MCAPI_TRUE;
+}
+
+mcapi_boolean_t mcapi_trans_get_node_num(mcapi_uint_t* node) 
+{
+	*node = c_db->nodes[c_db->num_nodes - 1].node_num;
+	return MCAPI_TRUE;
+}
+
+mcapi_boolean_t mcapi_trans_get_node_index(mcapi_uint_t node_num) 
+{
+	return 0;
+}
+
+
 mcapi_boolean_t mcapi_trans_add_node (mcapi_uint_t node_num) 
 {
 	mcapi_boolean_t rc = MCAPI_TRUE;
 
 	/* lock the database */
-	mcapi_trans_access_database_pre_nocheck();
 
 	/* mcapi should have checked that the node doesn't already exist */
 
@@ -188,10 +206,10 @@ mcapi_boolean_t mcapi_trans_add_node (mcapi_uint_t node_num)
 	}
 
 	/* unlock the database */
-	mcapi_trans_access_database_post_nocheck();
 
 	return rc;
 }
+
 
 /***************************************************************************
 NAME:mcapi_trans_encode_handle_internal 
@@ -211,7 +229,7 @@ uint32_t mcapi_trans_encode_handle_internal (uint16_t node_index,uint16_t endpoi
 	uint32_t handle = 0;
 	uint8_t shift = 16;
 
-	assert ((node_index < MAX_NODES) && (endpoint_index < MAX_ENDPOINTS));
+	assert ((node_index <= MAX_NODES) && (endpoint_index < MAX_ENDPOINTS));
 
 	handle = node_index;
 	handle <<= shift;
@@ -239,8 +257,9 @@ mcapi_boolean_t mcapi_trans_decode_handle_internal (uint32_t handle, uint16_t *n
 	*node_index              = (handle & 0xffff0000) >> shift;
 	*endpoint_index          = (handle & 0x0000ffff);
 
-	if ((*node_index < MAX_NODES) && (*endpoint_index < MAX_ENDPOINTS) &&
-			(c_db->nodes[*node_index].node_d.endpoints[*endpoint_index].valid)) {
+	mcapi_dprintf(1, "node %d endpoint %d\n", *node_index, *endpoint_index);
+
+	if ((*node_index <= MAX_NODES) && (*endpoint_index < MAX_ENDPOINTS)) {
 		rc = MCAPI_TRUE;
 	}
 
@@ -253,18 +272,18 @@ mcapi_boolean_t mcapi_trans_decode_handle_internal (uint32_t handle, uint16_t *n
 /* checks if the given node is valid */
 mcapi_boolean_t mcapi_trans_valid_node(mcapi_uint_t node_num)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 mcapi_boolean_t mcapi_trans_valid_endpoints(mcapi_uint_t node_num)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 /* checks to see if the port_num is a valid port_num for this system */
 mcapi_boolean_t mcapi_trans_valid_port(mcapi_uint_t port_num)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
@@ -272,7 +291,7 @@ mcapi_boolean_t mcapi_trans_valid_port(mcapi_uint_t port_num)
 /* checks if the endpoint handle refers to a valid endpoint */
 mcapi_boolean_t mcapi_trans_valid_endpoint (mcapi_endpoint_t endpoint)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
@@ -280,7 +299,7 @@ mcapi_boolean_t mcapi_trans_valid_endpoint (mcapi_endpoint_t endpoint)
 /* checks if the channel is open for a given endpoint */
 mcapi_boolean_t mcapi_trans_endpoint_channel_isopen (mcapi_endpoint_t endpoint)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
@@ -387,6 +406,7 @@ mcapi_boolean_t mcapi_trans_valid_sclchan_recv_handle( mcapi_sclchan_recv_hndl_t
 
 mcapi_boolean_t mcapi_trans_initialized (mcapi_node_t node_id)
 {
+	printf("%s\n", __func__); 
   return MCAPI_FALSE;
 }
 
@@ -397,7 +417,7 @@ mcapi_uint32_t mcapi_trans_num_endpoints()
 
 mcapi_boolean_t mcapi_trans_valid_priority(mcapi_priority_t priority)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 mcapi_boolean_t mcapi_trans_connected(mcapi_endpoint_t endpoint)
@@ -432,6 +452,7 @@ mcapi_boolean_t valid_size_param (size_t* size)
 /****************** initialization *************************/
 mcapi_boolean_t mcapi_trans_initialize_() 
 {
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
 	int semkey = ftok(SEMKEYPATH,SEMKEYID);
 	int shmkey = 0;
 	mcapi_boolean_t rc = MCAPI_TRUE;
@@ -439,7 +460,7 @@ mcapi_boolean_t mcapi_trans_initialize_()
 	if (!sem_id) {
 		/* create the semaphore (it may already exist) */
 		sem_id =  transport_sm_create_semaphore(semkey);
-		if (!sem_id) {
+		if (sem_id == -1) {
 			return MCAPI_FALSE;
 		}
 	}  
@@ -453,18 +474,22 @@ mcapi_boolean_t mcapi_trans_initialize_()
 		transport_sm_create_shared_mem(&shm_addr,shmkey,sizeof(mcapi_database));  
 
 		if (!shm_addr) {
-			return MCAPI_FALSE;
+			mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
+			rc = MCAPI_FALSE;
 		}
 
 		c_db = shm_addr; 
 	}
 	transport_sm_unlock_semaphore(sem_id);
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
 	return MCAPI_TRUE;
 }
 
 /* initialize the transport layer */
 mcapi_boolean_t mcapi_trans_initialize(mcapi_uint_t node_num)
 {
+	sm_dev_initialize();
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
 	if (mcapi_trans_initialize_()) {
 		mcapi_trans_add_node(node_num);
 		return MCAPI_TRUE;
@@ -477,6 +502,7 @@ mcapi_boolean_t mcapi_trans_initialize(mcapi_uint_t node_num)
 /****************** tear down ******************************/
 void mcapi_trans_finalize()
 {
+	sm_dev_finalize();
 	void *shm_addr = c_db;
 	uint32_t shmkey = ftok(SEMKEYPATH,SEMKEYID);
 	uint32_t shmid = shmget(shmkey, sizeof(mcapi_database), 0666); 
@@ -489,13 +515,13 @@ void mcapi_trans_finalize()
 mcapi_boolean_t mcapi_trans_create_endpoint(mcapi_endpoint_t *endpoint,  mcapi_uint_t port_num,mcapi_boolean_t anonymous)
 {
 	int node_index = mcapi_trans_get_node_index(0);
-	int index = sm_create_session(port_num, SP_SESSION_PACKET);
+	int index = sm_create_session(port_num, SP_PACKET);
 	assert(index >= 0);
 	if (index < 0) {
-		return index;
+		return MCAPI_FALSE;
 	}
 	*endpoint = mcapi_trans_encode_handle_internal(node_index,index);
-	return MCAPI_FALSE;
+	return MCAPI_TRUE;
 }
 
 
@@ -514,6 +540,10 @@ mcapi_boolean_t mcapi_trans_get_endpoint(mcapi_endpoint_t *endpoint,mcapi_uint_t
   return MCAPI_FALSE;
 }
 
+mcapi_boolean_t mcapi_trans_endpoint_exists(mcapi_uint_t port_num)
+{
+	return MCAPI_FALSE;
+}
 
 
 /* delete the given endpoint */
@@ -573,13 +603,16 @@ void mcapi_trans_msg_recv_i( mcapi_endpoint_t  receive_endpoint,  char* buffer, 
 	uint16_t rn,re;
 	int ret;
 	int index;
+	char *buf_p;
+	uint32_t len;
 	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
 
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
 
 	index = re;
-	ret = sm_recv_packet(index, buffer, buffer_size);
+	ret = sm_recv_packet(index,&sn, &se, &buf_p, &len);
 
+//	memcpy(buffer, buf_p, len);
 }
 
 

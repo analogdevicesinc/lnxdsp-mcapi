@@ -32,6 +32,7 @@ notice, this list of conditions and the following disclaimer.
 
 #include <mcapi.h>
 #include <mcapi_trans.h>
+#include <mcapi_dev_impl.h>
 #include <config.h> /* for MCAPI version */
 
 #include <string.h> /* for strncpy */
@@ -68,21 +69,35 @@ void mcapi_initialize(
                       MCAPI_OUT mcapi_version_t* mcapi_version, 
                       MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
   if (!valid_status_param(mcapi_status)) {
     if (mcapi_status != NULL) {
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
       *mcapi_status = MCAPI_EPARAM;
     }
   } else {
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
     *mcapi_status = MCAPI_SUCCESS;
     if (!valid_version_param(mcapi_version)) {
+
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
+
       *mcapi_status = MCAPI_EPARAM;
     } else {
+
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
       (void)strncpy(*mcapi_version,MCAPI_VERSION,sizeof(MCAPI_VERSION));
       if (!mcapi_trans_valid_node(node_id)) {
+
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
         *mcapi_status = MCAPI_ENODE_NOTVALID;
       } else if (mcapi_trans_initialized(node_id)) {
+
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
         *mcapi_status = MCAPI_INITIALIZED;
       } else if (!mcapi_trans_initialize(node_id)) {
+
+	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
         *mcapi_status = MCAPI_ENO_INIT;
       } 
     }
