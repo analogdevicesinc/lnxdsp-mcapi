@@ -28,7 +28,6 @@ void wrong(unsigned line)
 
 mcapi_boolean_t send (mcapi_sclchan_send_hndl_t send_handle, mcapi_endpoint_t recv,unsigned long long data,uint32_t size,mcapi_status_t status,int exp_status) {
   mcapi_boolean_t rc = MCAPI_FALSE;
-  uint64_t size_mask;
   switch (size) {
   case (8): mcapi_sclchan_send_uint8(send_handle,data,&status); break;
   case (16): mcapi_sclchan_send_uint16(send_handle,data,&status); break;
@@ -37,8 +36,8 @@ mcapi_boolean_t send (mcapi_sclchan_send_hndl_t send_handle, mcapi_endpoint_t re
   default: fprintf (stderr,"ERROR: bad data size in call to send\n");
   };
   if (status == MCAPI_SUCCESS) {
-    fprintf(stderr,"endpoint=%i has sent %i byte(s): [%llx]\n",(int)send_handle,(int)size/8,data);
-  } else { fprintf(stderr,"endpoint=%i failed to be sent %i byte(s): [%llx]\n",(int)send_handle,(int)size/8,data); } 
+    fprintf(stderr,"endpoint=%i has sent %i byte(s): [%llu]\n",(int)send_handle,(int)size/8,data);
+  }
   if (status == exp_status) {
     rc = MCAPI_TRUE;
   }
@@ -78,7 +77,7 @@ int main () {
 	mcapi_param_t parms;
 	mcapi_info_t version;
 	mcapi_request_t request;
-	mcapi_endpoint_t ep1,ep2,ep3;
+	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 
 	/* cases:
 	1: both named endpoints (1,2)
@@ -86,10 +85,9 @@ int main () {
 	mcapi_sclchan_send_hndl_t s1;
 	mcapi_sclchan_recv_hndl_t r1;
 	mcapi_uint_t avail;
-	int s,t=0;
+	int s;
 	int i;
-//	int sizes[NUM_SIZES] = {8,16,32,64};
-	int sizes[NUM_SIZES] = {64,64,64,64};
+	int sizes[NUM_SIZES] = {8,16,32,64};
 	uint64_t test_pattern = 0x1122334455667788ULL;
 	size_t size;
 	mcapi_boolean_t rc = MCAPI_FALSE;
@@ -110,48 +108,51 @@ int main () {
 	ep3 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM1,MCA_INFINITE, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
+	ep4 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM2,MCA_INFINITE, &status);
+	if (status != MCAPI_SUCCESS) { WRONG }
+
+
+
 
 	/*************************** connect the channels *********************/
 	mcapi_sclchan_connect_i(ep1,ep3,&request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
+	mcapi_sclchan_connect_i(ep2,ep4,&request, &status);
+	if (status != MCAPI_SUCCESS) { WRONG }
 
 	/*************************** open the channels *********************/
 	mcapi_sclchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
 	sleep(1);
-
 	/* test send/recv of different sizes */
 	for (s = 0; s < NUM_SIZES; s++) {
 		size = sizes[s];
 		/* send and recv messages on the channels */
 		/* regular endpoints */
-		rc = send (s1,ep2,test_pattern,size,status,MCAPI_SUCCESS);
+		rc = send (s1,ep3,test_pattern,size,status,MCAPI_SUCCESS);
 		if (!rc) {WRONG}
 	}
 
-	mcapi_sclchan_send_close_i(s1,&request,&status);
+	mcapi_sclchan_send_close_i(s1,&request,&status); 
 
-	mcapi_sclchan_recv_open_i(&r1,ep2, &request, &status);
-#if 1 
-  while (1) {
-	        avail = mcapi_sclchan_available(r1, &status);
-	        printf("check avail status %d   hh\n", avail);
-		         if (avail > 0) {
-                                rc = recv (r1,size,status,MCAPI_SUCCESS,test_pattern);
-				if (!rc) {WRONG}
-				t = t+1;
-     				if (t == 3)
-		             	break;
-  		          }
-	        sleep(2);
- }
-#endif
+	mcapi_sclchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
 
-	mcapi_sclchan_recv_close_i(r1,&request, &status);
+
+	while (1) {
+		avail = mcapi_sclchan_available(r1, &status);
+		if (avail > 0) {
+			recv(r1,8,status, MCAPI_SUCCESS, test_pattern);
+			break;
+		}
+		sleep(2);
+	}
+	mcapi_sclchan_recv_close_i(r1,&request,&status); 
+
 
 	mcapi_finalize(&status);
+
 	printf("   Test PASSED\n");
 	return 0;
 }
