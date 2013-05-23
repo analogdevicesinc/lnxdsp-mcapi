@@ -590,6 +590,255 @@ void mcapi_msg_recv(
   }
 }
 
+mcapi_uint_t mcapi_msg_available(
+		MCAPI_IN mcapi_endpoint_t receive_endpoint, 
+		MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+	mcapi_uint_t rc = 0;
+	if (! valid_status_param(mcapi_status)) {
+		if (mcapi_status != NULL) {
+			*mcapi_status = MCAPI_EPARAM;
+		}
+	} else {
+		*mcapi_status = MCAPI_SUCCESS;
+		if( !mcapi_trans_valid_endpoint(receive_endpoint)) {
+			*mcapi_status = MCAPI_ENOT_ENDP;
+		} else {
+			rc = mcapi_trans_msg_available(receive_endpoint);
+		}
+	}
+	return rc;
+}
+
+void mcapi_connect_pktchan_i(
+        MCAPI_IN mcapi_endpoint_t  send_endpoint, 
+        MCAPI_IN mcapi_endpoint_t  receive_endpoint, 
+        MCAPI_OUT mcapi_request_t* request, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+  /* MCAPI_ENO_REQUEST handled at the transport layer */
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS;
+    if ( ! mcapi_trans_valid_endpoints(send_endpoint,receive_endpoint)) {
+      *mcapi_status = MCAPI_ENOT_ENDP;
+    } else if (( mcapi_trans_channel_connected (send_endpoint)) ||  
+               ( mcapi_trans_channel_connected (receive_endpoint))) {
+      *mcapi_status = MCAPI_ECONNECTED;
+    } else if (! mcapi_trans_compatible_endpoint_attributes (send_endpoint,receive_endpoint)) {
+      *mcapi_status = MCAPI_EATTR_INCOMP;
+    } 
+    mcapi_trans_connect_pktchan_i (send_endpoint,receive_endpoint,request,mcapi_status);
+  }
+}
+
+void mcapi_open_pktchan_recv_i(
+        MCAPI_OUT mcapi_pktchan_recv_hndl_t* recv_handle, 
+        MCAPI_IN mcapi_endpoint_t receive_endpoint, 
+        MCAPI_OUT mcapi_request_t* request, 
+        MCAPI_OUT mcapi_status_t* mcapi_status) 
+{
+  /* FIXME: (errata B2) shouldn't this function also check  MCAPI_ENO_REQUEST, there are several
+     non-blocking functions that don't check for this - is that intentional or an
+     oversight in the spec? */
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS;   
+    if (! valid_request_param(request)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else if (! mcapi_trans_valid_endpoint(receive_endpoint) ) {
+      *mcapi_status = MCAPI_ENOT_ENDP;
+    } else if ( mcapi_trans_channel_type (receive_endpoint) == MCAPI_SCL_CHAN) {
+      *mcapi_status = MCAPI_ECHAN_TYPE;
+    } else if (! mcapi_trans_recv_endpoint (receive_endpoint)) {
+      *mcapi_status = MCAPI_EDIR;
+    } else if ( !mcapi_trans_connected (receive_endpoint)) {
+      *mcapi_status = MCAPI_ENOT_CONNECTED;
+    }
+    mcapi_trans_open_pktchan_recv_i(recv_handle,receive_endpoint,request,mcapi_status);
+  }
+}
+
+void mcapi_open_pktchan_send_i(
+        MCAPI_OUT mcapi_pktchan_send_hndl_t* send_handle, 
+        MCAPI_IN mcapi_endpoint_t  send_endpoint, 
+        MCAPI_OUT mcapi_request_t* request, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+  /* FIXME: (errata B2) shouldn't this function also check  MCAPI_ENO_REQUEST? */
+  /* FIXME: (errata B4) shouldn't this function also check MCAPI_ENOT_CONNECTED?  I do, but it's not in the spec */
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! valid_request_param(request)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else if (! mcapi_trans_valid_endpoint(send_endpoint) ) {
+      *mcapi_status = MCAPI_ENOT_ENDP;
+    } else if ( mcapi_trans_channel_type (send_endpoint) == MCAPI_SCL_CHAN){
+      *mcapi_status = MCAPI_ECHAN_TYPE;
+    } else if (! mcapi_trans_send_endpoint (send_endpoint)) {
+      *mcapi_status = MCAPI_EDIR;
+    } else if ( !mcapi_trans_connected (send_endpoint)) {
+      *mcapi_status = MCAPI_ENOT_CONNECTED;
+    }
+    mcapi_trans_open_pktchan_send_i(send_handle,send_endpoint,request,mcapi_status);
+  }
+}
+
+void mcapi_pktchan_send_i(
+        MCAPI_IN mcapi_pktchan_send_hndl_t send_handle, 
+        MCAPI_IN void* buffer, 
+        MCAPI_IN size_t size, 
+        MCAPI_OUT mcapi_request_t* request, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+  /* MCAPI_ENO_BUFFER, MCAPI_ENO_REQUEST and MCAPI_ENO_MEM handled at the transport layer */
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! valid_request_param(request)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else if (! mcapi_trans_valid_pktchan_send_handle(send_handle) ) {
+      *mcapi_status = MCAPI_ENOT_HANDLE;
+    } else if ( size > MAX_PKT_SIZE) {
+      *mcapi_status = MCAPI_EPACK_LIMIT; 
+    }
+    mcapi_trans_pktchan_send_i(send_handle,buffer,size,request,mcapi_status);
+  }
+}
+
+void mcapi_pktchan_send(
+        MCAPI_IN mcapi_pktchan_send_hndl_t send_handle, 
+        MCAPI_IN void* buffer, 
+        MCAPI_IN size_t size, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! mcapi_trans_valid_pktchan_send_handle(send_handle) ) {
+      *mcapi_status = MCAPI_ENOT_HANDLE;
+    } else if ( size > MAX_PKT_SIZE) {
+      *mcapi_status = MCAPI_EPACK_LIMIT; 
+    } else  {
+      if (!mcapi_trans_pktchan_send (send_handle,buffer,size)) {
+        *mcapi_status = MCAPI_ENO_BUFFER;
+      }
+    }
+  }
+}
+
+void mcapi_pktchan_recv_i(
+        MCAPI_IN mcapi_pktchan_recv_hndl_t receive_handle,  
+        MCAPI_OUT void** buffer, 
+        MCAPI_OUT mcapi_request_t* request, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{ 
+  /* MCAPI_EPACKLIMIT, MCAPI_ENO_BUFFER, and MCAPI_ENO_REQUEST are handled at the transport layer */
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! valid_request_param(request)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else   if (! valid_buffer_param(buffer)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else if (! mcapi_trans_valid_pktchan_recv_handle(receive_handle) ) {
+      *mcapi_status = MCAPI_ENOT_HANDLE;
+    }
+    mcapi_trans_pktchan_recv_i (receive_handle,buffer,request,mcapi_status);
+  }
+}
+
+void mcapi_pktchan_recv(
+        MCAPI_IN mcapi_pktchan_recv_hndl_t receive_handle, 
+        MCAPI_OUT void** buffer, 
+        MCAPI_OUT size_t* received_size, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+  
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS;   
+    if (! valid_buffer_param(buffer)) {
+      *mcapi_status = MCAPI_EPARAM;
+    } else if (! mcapi_trans_valid_pktchan_recv_handle(receive_handle) ) {
+      *mcapi_status = MCAPI_ENOT_HANDLE;
+    } else  {
+      if (mcapi_trans_pktchan_recv (receive_handle,buffer,received_size)) {
+        if ( *received_size > MAX_PKT_SIZE) {
+          *mcapi_status = MCAPI_EPACK_LIMIT;
+        } 
+      } else {
+        *mcapi_status = MCAPI_ENO_BUFFER;
+      }
+    }
+  }
+}
+
+mcapi_uint_t mcapi_pktchan_available(
+        MCAPI_IN mcapi_pktchan_recv_hndl_t receive_handle, 
+        MCAPI_OUT mcapi_status_t* mcapi_status) 
+{
+  int num = 0;
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS;
+    if (! mcapi_trans_valid_pktchan_recv_handle(receive_handle) ) {
+      *mcapi_status = MCAPI_ENOT_HANDLE;
+    } else {
+      num = mcapi_trans_pktchan_available(receive_handle);
+    }
+  }
+  return num;
+}
+
+void mcapi_pktchan_free(
+        MCAPI_IN void* buffer, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (!mcapi_trans_pktchan_free (buffer)) {
+      *mcapi_status = MCAPI_ENOT_VALID_BUF;
+    }
+  }
+}
+
 mcapi_boolean_t mcapi_test(
         MCAPI_IN mcapi_request_t* request, 
         MCAPI_OUT size_t* size, 
@@ -611,26 +860,6 @@ mcapi_boolean_t mcapi_test(
     }
   }
   return rc;
-}
-
-mcapi_uint_t mcapi_msg_available(
-		MCAPI_IN mcapi_endpoint_t receive_endpoint, 
-		MCAPI_OUT mcapi_status_t* mcapi_status)
-{
-	mcapi_uint_t rc = 0;
-	if (! valid_status_param(mcapi_status)) {
-		if (mcapi_status != NULL) {
-			*mcapi_status = MCAPI_EPARAM;
-		}
-	} else {
-		*mcapi_status = MCAPI_SUCCESS;
-		if( !mcapi_trans_valid_endpoint(receive_endpoint)) {
-			*mcapi_status = MCAPI_ENOT_ENDP;
-		} else {
-			rc = mcapi_trans_msg_available(receive_endpoint);
-		}
-	}
-	return rc;
 }
 
 mcapi_boolean_t mcapi_wait(

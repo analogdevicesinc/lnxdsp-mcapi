@@ -75,10 +75,13 @@ uint32_t transport_sm_create_semaphore(uint32_t semkey) {
 
 	arg.val = 1;
 	if((sem_id = semget(semkey, 1, IPC_CREAT|IPC_EXCL|0666)) == -1)  {
+		perror("semget\n");
 		return -1;
 	} else {
-		if (semctl(sem_id, 0, SETVAL, arg) == -1)
+		if (semctl(sem_id, 0, SETVAL, arg) == -1) {
+			perror("semctl\n");
 			return -1;
+		}
 	}
 	return sem_id;
 }
@@ -175,7 +178,17 @@ mcapi_boolean_t mcapi_trans_get_node_num(mcapi_uint_t* node)
 
 mcapi_boolean_t mcapi_trans_get_node_index(mcapi_uint_t node_num) 
 {
-	return 0;
+  /* look up the node */
+  int i;
+  uint32_t node_index = MAX_NODES;
+  for (i = 0; i < c_db->num_nodes; i++) {
+    if (c_db->nodes[i].node_num == node_num) {
+      node_index = i;
+      break;
+    }
+  }
+  assert (node_index != MAX_NODES);
+  return node_index;
 }
 
 
@@ -353,7 +366,20 @@ channel_type mcapi_trans_channel_type (mcapi_endpoint_t endpoint)
 
 mcapi_boolean_t mcapi_trans_channel_connected  (mcapi_endpoint_t endpoint)
 {
-  return MCAPI_FALSE;
+	uint16_t rn,re;
+	int index;
+	int ret;
+	mcapi_uint_t status = 0;
+	assert(mcapi_trans_decode_handle_internal(endpoint,&rn,&re));
+	index = re;
+	ret = sm_get_session_status(index, NULL, NULL, &status);
+	if (ret)
+		return MCAPI_FALSE;
+	mcapi_dprintf(1, "%s status = %d\n", __func__, status);
+	if (status == 1)
+		return MCAPI_TRUE;
+	else
+		return MCAPI_FALSE;
 }
 
 
@@ -406,7 +432,21 @@ mcapi_boolean_t mcapi_trans_valid_sclchan_recv_handle( mcapi_sclchan_recv_hndl_t
 
 mcapi_boolean_t mcapi_trans_initialized (mcapi_node_t node_id)
 {
-	printf("%s\n", __func__); 
+  int i;
+  mcapi_boolean_t rc = MCAPI_FALSE;
+
+  if (c_db == NULL)
+  	return rc;
+    
+    for (i = 0; i < MAX_NODES; i++) {
+      if ((c_db->nodes[i].valid) && (c_db->nodes[i].node_num == node_id)) {
+        rc = MCAPI_TRUE;
+        break;
+     }
+    return rc;
+  }
+
+  printf("%s\n", __func__); 
   return MCAPI_FALSE;
 }
 
@@ -422,6 +462,7 @@ mcapi_boolean_t mcapi_trans_valid_priority(mcapi_priority_t priority)
 
 mcapi_boolean_t mcapi_trans_connected(mcapi_endpoint_t endpoint)
 {
+
   return MCAPI_FALSE;
 }
 
@@ -461,6 +502,7 @@ mcapi_boolean_t mcapi_trans_initialize_()
 		/* create the semaphore (it may already exist) */
 		sem_id =  transport_sm_create_semaphore(semkey);
 		if (sem_id == -1) {
+			mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
 			return MCAPI_FALSE;
 		}
 	}  
@@ -514,25 +556,23 @@ void mcapi_trans_finalize()
 /* create endpoint <node_num,port_num> and return it's handle */
 mcapi_boolean_t mcapi_trans_create_endpoint(mcapi_endpoint_t *endpoint,  mcapi_uint_t port_num,mcapi_boolean_t anonymous)
 {
-	int node_index = mcapi_trans_get_node_index(0);
+	int node_num;
+	int node_index;
 	int index = sm_create_session(port_num, SP_PACKET);
 	assert(index >= 0);
 	if (index < 0) {
 		return MCAPI_FALSE;
 	}
+	assert (mcapi_trans_get_node_num(&node_num));
+	node_index = mcapi_trans_get_node_index(node_num);
 	*endpoint = mcapi_trans_encode_handle_internal(node_index,index);
 	return MCAPI_TRUE;
 }
-
-
 
 /* non-blocking get endpoint for the given <node_num,port_num> and set endpoint parameter to it's handle */
 void mcapi_trans_get_endpoint_i(  mcapi_endpoint_t* endpoint, mcapi_uint_t node_num, mcapi_uint_t port_num,mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
 }
-
-
-
 
 /* blocking get endpoint for the given <node_num,port_num> and return it's handle */
 mcapi_boolean_t mcapi_trans_get_endpoint(mcapi_endpoint_t *endpoint,mcapi_uint_t node_num, mcapi_uint_t port_num)
@@ -544,7 +584,6 @@ mcapi_boolean_t mcapi_trans_endpoint_exists(mcapi_uint_t port_num)
 {
 	return MCAPI_FALSE;
 }
-
 
 /* delete the given endpoint */
 void mcapi_trans_delete_endpoint( mcapi_endpoint_t endpoint)
@@ -656,26 +695,46 @@ mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 /****************** pkt channels ****************************/
 void mcapi_trans_connect_pktchan_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  receive_endpoint, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t sn,se,rn,re;
+	int index;
+	int ret;
+	mcapi_uint_t status = 0;
+	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+	mcapi_dprintf(1, "%s se %d re %d rn= %d\n", __func__, se, re, rn);
+	ret = sm_connect_session(se, re, rn);
+	if (ret)
+		*mcapi_status = MCAPI_FALSE;
+	*mcapi_status = MCAPI_FALSE;
 }
 
 
 
 void mcapi_trans_open_pktchan_recv_i( mcapi_pktchan_recv_hndl_t* recv_handle, mcapi_endpoint_t receive_endpoint, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t rn,re;
+	int ret;
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+	ret = sm_open_session(re);
+	if (ret)
+		*mcapi_status = MCAPI_FALSE;
+	*mcapi_status = MCAPI_FALSE;
 }
-
- 
 
 void mcapi_trans_open_pktchan_send_i( mcapi_pktchan_send_hndl_t* send_handle, mcapi_endpoint_t  send_endpoint, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t sn,se;
+	int ret;
+	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
+	ret = sm_open_session(se);
+	if (ret)
+		*mcapi_status = MCAPI_FALSE;
+	*mcapi_status = MCAPI_FALSE;
 }
-
-
 
 void  mcapi_trans_pktchan_send_i( mcapi_pktchan_send_hndl_t send_handle, void* buffer, size_t size, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
 }
-
 
 
 mcapi_boolean_t  mcapi_trans_pktchan_send( mcapi_pktchan_send_hndl_t send_handle, void* buffer, size_t size)
@@ -811,14 +870,18 @@ mcapi_boolean_t mcapi_trans_test_i( mcapi_request_t* request, size_t* size,mcapi
 
 		switch (request->type) {
 			case (RECV) :
+				if (avail)
+					rc = MCAPI_TRUE;
+			case (SEND) :
+				if (!uncomplete)
+					rc = MCAPI_TRUE;
 			case (GET_ENDPT) :
 			default:
 				assert(0);
 				break;
 		};
 	}
-
-  return MCAPI_FALSE;
+	return rc;
 }
 
 

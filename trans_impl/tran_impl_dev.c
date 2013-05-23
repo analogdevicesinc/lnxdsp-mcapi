@@ -30,31 +30,59 @@ void sm_dev_finalize(int fd)
 int sm_create_session(uint32_t src_ep, uint32_t type)
 {
 	int ret;
+	memset(&pkt, 0, sizeof(pkt));
 	pkt.local_ep = src_ep;
 	pkt.type = type;
 	ret = ioctl(fd, CMD_SM_CREATE, &pkt);
-	return ret;
+	return pkt.session_idx;
 }
 
-int sm_destroy_session(uint32_t src_ep)
+int sm_destroy_session(uint32_t session_idx)
 {
 	int ret;
-	pkt.local_ep = src_ep;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
 	ret = ioctl(fd, CMD_SM_SHUTDOWN, &pkt);
 	return ret;
 }
 
-int sm_connect_session(uint32_t dst_ep, uint32_t dst_cpu, uint32_t src_ep)
+int sm_connect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu)
 {
 	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	pkt.remote_ep = dst_ep;
+	pkt.dst_cpu = dst_cpu;
 	ret = ioctl(fd, CMD_SM_CONNECT, &pkt);
 	return ret;
 }
 
-int sm_disconnect_session(uint32_t dst_ep, uint32_t src_ep)
+int sm_disconnect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu)
 {
 	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	pkt.remote_ep = dst_ep;
+	pkt.dst_cpu = dst_cpu;
 	ret = ioctl(fd, CMD_SM_CONNECT, &pkt);
+	return ret;
+}
+
+int sm_open_session(uint32_t session_idx)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	ret = ioctl(fd, CMD_SM_OPEN, &pkt);
+	return ret;
+}
+
+int sm_close_session(uint32_t session_idx)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	ret = ioctl(fd, CMD_SM_CLOSE, &pkt);
 	return ret;
 }
 
@@ -62,6 +90,7 @@ int sm_send_packet(uint32_t session_idx, uint32_t dst_ep,
 		uint32_t dst_cpu, void *buf, uint32_t len)
 {
 	int ret;
+	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -75,6 +104,7 @@ int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu, vo
 		uint32_t *len)
 {
 	int ret;
+	memset(&pkt, 0, sizeof(pkt));
 	printf("session_idx %d\n", session_idx);
 	pkt.session_idx = session_idx;
 	if (buf)
