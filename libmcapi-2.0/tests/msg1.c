@@ -55,7 +55,7 @@ int main () {
   mcapi_param_t parms;
   mcapi_info_t version;
   mcapi_endpoint_t ep1,ep2;
-  int i,s = 0, rc = 0;
+  int i,s = 0, rc = 0,pass_num=0;
   mcapi_uint_t avail;
 
   /* create a node */
@@ -83,26 +83,31 @@ int main () {
   }
   
 #if 1
-  rc = 0;
+  i = 0;
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
 	if (avail > 0) {
 		recv (ep1,status,MCAPI_SUCCESS);
   		if (status != MCAPI_SUCCESS) { WRONG }
-                printf("CoreA : message recv. The %d time receiving ok, status %i\n", rc, status);
+		else {pass_num++;}
 
-		if (rc == (NUM_SIZES - 1))
-                	break;
-                rc++;
+                printf("CoreA : message recv. The %d time receiving , status %d\n", i, status);
+                i++;
+		if (i == NUM_SIZES)
+               	break;
 	}
 	sleep(2);
   }
 #endif
 
   mcapi_endpoint_delete(ep1,&status);
-  mcapi_endpoint_delete(ep2,&status);
 
   mcapi_finalize(&status);
+
+  if (pass_num == NUM_SIZES )
   printf("CoreA Test PASSED\n");
+  else
+  printf("CoreA Test FAILED\n");
+
   return 0;
 }

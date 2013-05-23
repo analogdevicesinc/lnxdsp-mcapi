@@ -140,7 +140,7 @@ void do_child()
 
 	mcapi_finalize(&status);
 
-	printf("Child   Test PASSED\n");
+	printf("Child Test PASSED\n");
 
         _exit(0);
 }
@@ -158,7 +158,7 @@ void do_parent(int pid)
 
 	mcapi_uint_t avail;
 	int stat_val;
-	int s;
+	int s,pass_num=0;
 	int i;
 	int sizes[NUM_SIZES] = {8,16,32,64};
 	uint64_t test_pattern = 0x9383736353433323ULL;
@@ -211,7 +211,9 @@ void do_parent(int pid)
 		avail = mcapi_sclchan_available(r1, &status);
 		if (avail > 0) {
 			test_pattern = 0x1122334455667788ULL;
-			recv(r1,64,status, MCAPI_SUCCESS, test_pattern);
+	                rc = recv(r1,64,status, MCAPI_SUCCESS, test_pattern);
+			if (status != MCAPI_TRUE) { WRONG }
+			else {pass_num++;}
 			break;
 		}
 		sleep(2);
@@ -231,8 +233,14 @@ void do_parent(int pid)
 
 	mcapi_finalize(&status);
 
-	printf("Parent   Test PASSED\n");
+	if (pass_num == 1) {
+    	printf("Parent Test PASSED\n");
 	fflush(stdout);
+  	} else {
+    	printf("Parent Test FAILED\n");
+	fflush(stdout);
+	exit(1);
+  	}
 }
 
 
@@ -285,7 +293,7 @@ int main (int ac, char **av) {
 	do_parent(childpid);	
 
         }
-	printf("   Test PASSED\n");
+    	printf("CoreA Test PASSED\n");
 	fflush(stdout);
 	return 0;
 }

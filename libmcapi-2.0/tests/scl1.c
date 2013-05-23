@@ -86,7 +86,7 @@ int main () {
 	mcapi_sclchan_recv_hndl_t r1;
 	mcapi_uint_t avail;
 	int s;
-	int i;
+	int i,pass_num=0;
 	int sizes[NUM_SIZES] = {8,16,32,64};
 	uint64_t test_pattern = 0x1122334455667788ULL;
 	size_t size;
@@ -147,6 +147,7 @@ int main () {
 		if (avail > 0) {
 			rc = recv(r1,sizes[s++],status, MCAPI_SUCCESS, test_pattern);
 			if (!rc) {WRONG}
+			else {pass_num++;}
 			if (s == NUM_SIZES)
 				break;
 		}
@@ -164,6 +165,10 @@ int main () {
 	printf("Endpoint deleted\n");
 	mcapi_finalize(&status);
 
-	printf("CoreA Test PASSED\n");
+	if (pass_num == NUM_SIZES) {
+    	printf("CoreA Test PASSED\n");
+  	} else {
+    	printf("CoreA Test FAILED\n");
+  	}
 	return 0;
 }

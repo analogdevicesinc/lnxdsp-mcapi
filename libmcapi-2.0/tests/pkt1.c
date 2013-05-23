@@ -37,7 +37,7 @@ int main () {
   mcapi_pktchan_send_hndl_t s1; /* s1 = ep1->ep3 */
   mcapi_pktchan_recv_hndl_t r1; /* r1 = ep4->ep2 */
   int i = 0,s;
-  int rc = 1;
+  int rc = 1,pass_num=0;
   mcapi_status_t status;
   mcapi_request_t request;
   mcapi_param_t parms;
@@ -95,7 +95,8 @@ int main () {
 	  if (avail > 0) {
 		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
   		  if (status != MCAPI_SUCCESS) { WRONG }
-		  printf("CoreA :pktchan recv on coreA ok buffer %s, The %d time receiving ok, status %i\n",pbuffer, rc, status);
+		  else {pass_num++;}
+		  printf("CoreA :pktchan recv  buffer %s, The %d time receiving , status %i\n",pbuffer, pass_num, status);
 		  mcapi_pktchan_release(pbuffer, &status);
 		  break;
 	  }
@@ -108,10 +109,11 @@ int main () {
   if (status != MCAPI_SUCCESS) { WRONG }
 
   mcapi_finalize(&status);
-  if (rc == NUM_SIZES) {
-    printf("   Test PASSED\n");
+  if (pass_num == 1) {
+    printf("CoreA Test PASSED\n");
   } else {
-    printf("   Test FAILED\n");
+    printf("CoreA Test FAILED\n");
   }
-  return rc;
+  fflush(stdout);
+  return 0;
 }

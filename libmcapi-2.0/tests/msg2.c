@@ -130,7 +130,7 @@ void do_child()
 	mcapi_finalize(&status);
 
 	free(send_buf);
-	printf("Child   Test PASSED\n");
+	printf("Child Test PASSED\n");
 
         _exit(0);
 }
@@ -146,7 +146,7 @@ void do_parent(int pid)
         int stat_val;
 	mcapi_uint_t avail;
 	int s;
-	int i,rc;
+	int i,pass_num=0;
 	int fd;
 	char *send_buf0 = malloc(64);
 	if (!send_buf0)
@@ -187,17 +187,18 @@ void do_parent(int pid)
         }
 
 #if 1
-  rc = 0;
+  i = 0;
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
 	if (avail > 0) {
 		recv (ep1,status,MCAPI_SUCCESS);
   		if (status != MCAPI_SUCCESS) { WRONG }
-                printf("CoreA parent: message recv. The %d time receiving ok, status %i\n", rc, status);
+		else {pass_num++;}
+                printf("CoreA parent: message recv. The %d time receiving, status %i\n", i, status);
 
-		if (rc == (NUM_SIZES*2 - 1))
+		if (i == (NUM_SIZES*2 - 1))
                 	break;
-                rc++;
+                i++;
 	}
 	sleep(2);
   }
@@ -217,6 +218,13 @@ void do_parent(int pid)
 	mcapi_finalize(&status);
 
 	free(send_buf0);
+
+	if (pass_num == NUM_SIZES*2) {
+    	printf("Parent Test PASSED\n");
+  	} else {
+    	printf("Parent Test FAILED\n");
+	exit(1);
+  	}
 }
 
 int main (int ac, char **av) {
@@ -260,14 +268,10 @@ int main (int ac, char **av) {
 
 	} else {/* parent */
  
-	int stat_val;
-
 	do_parent(childpid);	
-
-
-	printf("Parent   Test PASSED\n");
 
 	}		
 
+    	printf("CoreA Test PASSED\n");
 	return 0;
 }

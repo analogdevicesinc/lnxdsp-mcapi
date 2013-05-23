@@ -123,7 +123,7 @@ void do_parent(int pid)
         void *pbuffer = NULL;
 	mcapi_uint_t avail;
 	int s;
-	int i;
+	int i,pass_num=0;
 	int fd;
 	char *send_buf0 = malloc(64);
 	if (!send_buf0)
@@ -183,7 +183,8 @@ void do_parent(int pid)
 	  if (avail > 0) {
 		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
   		  if (status != MCAPI_SUCCESS) { WRONG }
-		  printf("CoreA :pktchan recv on coreA ok buffer %s, The %d time receiving ok, status %i\n",pbuffer, rc, status);
+		  else {pass_num++;}
+		  printf("CoreA :pktchan recv  buffer %s, The %d time receiving , status %i\n",pbuffer, i, status);
 		  mcapi_pktchan_release(pbuffer, &status);
 		  break;
 	  }
@@ -205,6 +206,12 @@ void do_parent(int pid)
 	mcapi_finalize(&status);
 
 	free(send_buf0);
+	if (pass_num == 1) {
+    	printf("Parent Test PASSED\n");
+  	} else {
+    	printf("Parent Test FAILED\n");
+	exit(1);
+  	}
 }
 
 int main (int ac, char **av) {
@@ -250,10 +257,9 @@ int main (int ac, char **av) {
 
 	do_parent(childpid);	
 
-       
-	printf("Parent   Test PASSED\n");
+	}
 
-	}		
+    	printf("CoreA Test PASSED\n");
 
 	return 0;
 }
