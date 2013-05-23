@@ -107,7 +107,7 @@ void do_child()
      
         }
 
-#if 1
+#if 0
   rc = 0;
   while (1) {
 	avail = mcapi_msg_available(ep2, &status);
@@ -195,7 +195,7 @@ void do_parent(int pid)
   		if (status != MCAPI_SUCCESS) { WRONG }
                 printf("CoreA parent: message recv. The %d time receiving ok, status %i\n", rc, status);
 
-		if (rc == (NUM_SIZES - 1))
+		if (rc == (NUM_SIZES*2 - 1))
                 	break;
                 rc++;
 	}
