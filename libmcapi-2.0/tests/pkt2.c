@@ -31,8 +31,6 @@ void wrong(unsigned line)
   fflush(stdout);
   exit(1);
 }
-char send_buf[32] = "";
-char send_string[] = "mcapi_pkt1";
 
 void do_child()
 {
@@ -43,11 +41,15 @@ void do_child()
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
+	char send_string[] = "mcapi_pkt1";
 
 	mcapi_uint_t avail;
 	int s;
 	int i;
 	int fd;
+	char *send_buf = malloc(64);
+	if (!send_buf)
+		WRONG;
 
 	fd = open("/tmp/child.log", O_CREAT | O_RDWR, 0666);
 	if (fd < 0)
@@ -80,11 +82,11 @@ void do_child()
 
         /*************************** open the channels *********************/
         printf("open pktchan send\n");
-        mcapi_pktchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
+        mcapi_pktchan_send_open_i(&s1 /*send_handle*/,ep2, &request, &status);
         printf("status %d\n", status);
 
         for (s = 0; s < NUM_SIZES; s++) {
-        sprintf(send_buf, "%s %d", send_string, s);
+        sprintf(send_buf, "CHILD %s %d", send_string, s);
         mcapi_pktchan_send_i(s1,send_buf,32,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA: The %d time sending, status %d\n",s, status);
@@ -98,29 +100,42 @@ void do_child()
 	
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-        mcapi_endpoint_delete(ep4,&status);
-        if (status != MCAPI_SUCCESS) { WRONG }
-
 	mcapi_finalize(&status);
 
+	free(send_buf);
 	printf("Child   Test PASSED\n");
 
         _exit(0);
 }
 
-void do_parent()
+void do_parent(int pid)
 {
 	mcapi_status_t status;
 	mcapi_param_t parms;
 	mcapi_info_t version;
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
-	mcapi_sclchan_send_hndl_t s1;
+	mcapi_sclchan_send_hndl_t s0;
 	mcapi_boolean_t rc = MCAPI_FALSE;
+	char send_string[] = "mcapi_pkt1";
+	int stat_val;
 
 	mcapi_uint_t avail;
 	int s;
 	int i;
+	int fd;
+	char *send_buf0 = malloc(64);
+	if (!send_buf0)
+		WRONG;
+
+	fd = open("/tmp/parent.log", O_CREAT | O_RDWR, 0666);
+	if (fd < 0)
+		{ WRONG };
+
+	if (dup2(fd, STDOUT_FILENO) == -1) {
+		WRONG;
+	}
+	close(fd);
 
 	/* create a node */
         mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
@@ -141,12 +156,12 @@ void do_parent()
 
         /*************************** open the channels *********************/
         printf("open pktchan send\n");
-        mcapi_pktchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
+        mcapi_pktchan_send_open_i(&s0 /*send_handle*/,ep1, &request, &status);
         printf("status %d\n", status);
 
         for (s = 0; s < NUM_SIZES; s++) {
-        sprintf(send_buf, "%s %d", send_string, s);
-        mcapi_pktchan_send_i(s1,send_buf,32,&request,&status);
+        sprintf(send_buf0, "PARENT %s %d", send_string, s);
+        mcapi_pktchan_send_i(s0,send_buf0,32,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA: The %d time sending, status %d\n",s, status);
 
@@ -154,7 +169,7 @@ void do_parent()
 
         printf("close pktchan send\n");
         /* close the channels */
-        mcapi_pktchan_send_close_i(s1,&request,&status); 
+        mcapi_pktchan_send_close_i(s0,&request,&status); 
         printf("status %d\n", status);
 	
 # if 0 
@@ -177,12 +192,18 @@ void do_parent()
 
 
 #endif
+
+	 waitpid(pid, &stat_val, 0);
+	if (WIFEXITED(stat_val))
+		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
+	else if (WIFSIGNALED(stat_val))
+		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
+
         mcapi_endpoint_delete(ep1,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-        mcapi_endpoint_delete(ep3,&status);
-        if (status != MCAPI_SUCCESS) { WRONG }
-
 	mcapi_finalize(&status);
+
+	free(send_buf0);
 }
 
 int main (int ac, char **av) {
@@ -194,8 +215,6 @@ int main (int ac, char **av) {
 	/* cases:
 	1: both named endpoints (1,2)
 	*/
-	mcapi_sclchan_send_hndl_t s1;
-	mcapi_sclchan_recv_hndl_t r1;
 	mcapi_uint_t avail;
 	int s;
 	int i;
@@ -227,16 +246,10 @@ int main (int ac, char **av) {
 
 	} else {/* parent */
  
-	int stat_val;
 
-	do_parent();	
+	do_parent(childpid);	
 
-        waitpid(childpid, &stat_val, 0);
-	if (WIFEXITED(stat_val))
-		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
-	else if (WIFSIGNALED(stat_val))
-		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
-
+       
 	printf("Parent   Test PASSED\n");
 
 	}		
