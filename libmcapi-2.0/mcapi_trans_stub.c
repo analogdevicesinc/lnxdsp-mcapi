@@ -1125,9 +1125,10 @@ void mcapi_trans_msg_recv_i( mcapi_endpoint_t  receive_endpoint,  char* buffer, 
 	}
 
 	ret = sm_recv_packet(index, &se, &sn, buffer, &len);
-	if (ret) {
+	if (ret < 0) {
 		mcapi_dprintf(1,"recv failed\n");
-		*mcapi_status = ret;
+		*mcapi_status = MCAPI_FALSE;
+		return;
 	} else {
 	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
 	mcapi_dprintf(1,"buffer %s\n", buffer);
