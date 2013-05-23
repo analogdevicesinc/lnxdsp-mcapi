@@ -147,20 +147,19 @@ int main () {
 		if (avail > 0) {
 			rc = recv(r1,sizes[s++],status, MCAPI_SUCCESS, test_pattern);
 			if (!rc) {WRONG}
-			if ( s == NUM_SIZES )
-			break;
+			if (s == NUM_SIZES)
+				break;
 		}
 		sleep(2);
 	}
 	mcapi_sclchan_recv_close_i(r1,&request,&status); 
  
+ 	sleep(5);
 	/*************************** close the recv channels *********************/
 	printf("Start to delete endpoint\n");
 
 	mcapi_endpoint_delete(ep1,&status);
 	mcapi_endpoint_delete(ep2,&status);
-	mcapi_endpoint_delete(ep3,&status);
-	mcapi_endpoint_delete(ep4,&status);
 
 	printf("Endpoint deleted\n");
 	mcapi_finalize(&status);
