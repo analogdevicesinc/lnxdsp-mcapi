@@ -242,7 +242,7 @@ int sm_release_uncached_buf(void *buf, uint32_t size, uint32_t paddr)
 	pkt.buf_len = size;
 	pkt.buf = buf;
 	pkt.paddr = paddr;
-	ret = ioctl(fd, CMD_SM_GET_SESSION_STATUS, &pkt);
+	ret = ioctl(fd, CMD_SM_RELEASE_UNCACHED_BUF, &pkt);
 	return ret;
 }
 
