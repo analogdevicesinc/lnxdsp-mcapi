@@ -55,6 +55,7 @@ int main () {
   mcapi_version_t version;
   mcapi_endpoint_t ep1,ep2;
   int i;
+  mcapi_uint_t avail;
 
   /* create a node */
   mcapi_initialize(NODE_NUM,&version,&status);
@@ -70,8 +71,13 @@ int main () {
   /* send and recv messages on the endpoints */
   /* regular endpoints */
   send (ep1,ep2,"1Hello MCAPI",status,MCAPI_SUCCESS);
-  recv (ep2,status,MCAPI_SUCCESS);
- 
+  
+  while (1) {
+	avail = mcapi_msg_available(ep1, &status);
+	if (avail > 0)
+  		recv (ep1,status,MCAPI_SUCCESS);
+	sleep(1);
+  }
   mcapi_finalize(&status);
   printf("   Test PASSED\n");
   return 0;

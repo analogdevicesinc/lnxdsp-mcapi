@@ -1,5 +1,4 @@
 //#include <tls.h>
-#include <icc.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -9,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <mcapi.h>
+#include <icc.h>
 
 struct sm_packet pkt;
 int fd;
@@ -68,22 +68,68 @@ int sm_send_packet(uint32_t session_idx, uint32_t dst_ep,
 	pkt.buf_len = len;
 	pkt.buf = buf;
 	ret = ioctl(fd, CMD_SM_SEND, &pkt);
-	return 0;
+	return ret;
 }
 
-int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu, void **buf,
+int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu, void *buf,
 		uint32_t *len)
 {
 	int ret;
+	printf("session_idx %d\n", session_idx);
 	pkt.session_idx = session_idx;
+	if (buf)
+		pkt.buf = buf;
+	else
+		return -EINVAL;
 	pkt.buf_len = len;
 	ret = ioctl(fd, CMD_SM_RECV, &pkt);
+	if (ret)
+		return ret;
 	if (dst_ep)
 		*dst_ep = pkt.remote_ep;
 	if (dst_cpu)
 		*dst_cpu = pkt.dst_cpu;
-	*buf = pkt.buf;
 	if (len)
 		*len = pkt.buf_len;
 	return 0;
+}
+
+int sm_get_session_status(uint32_t session_idx, uint32_t *avail, uint32_t *uncomplete, uint32_t *status)
+{
+	int ret;
+	struct sm_session_status param;
+	memset(&pkt, 0, sizeof(struct sm_packet));
+	memset(&param, 0, sizeof(param));
+	pkt.session_idx = session_idx;
+	pkt.param = &param;
+	pkt.param_len = sizeof(param);
+	ret = ioctl(fd, CMD_SM_GET_SESSION_STATUS, &pkt);
+
+	if (avail)
+		*avail = param.avail;
+	if (uncomplete)
+		*uncomplete = param.uncomplete;
+	if (status)
+		*status = param.status;
+	return ret;
+}
+
+
+int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_pending, uint32_t *nfree)
+{
+	int ret;
+	struct sm_node_status param;
+	memset(&pkt, 0, sizeof(struct sm_packet));
+	memset(&param, 0, sizeof(param));
+	pkt.param = &param;
+	pkt.param_len = sizeof(param);
+	ret = ioctl(fd, CMD_SM_GET_NODE_STATUS, &pkt);
+
+	if (session_mask)
+		*session_mask = param.session_mask;
+	if (session_pending)
+		*session_pending = param.session_pending;
+	if (nfree)
+		*nfree = param.nfree;
+	return ret;
 }

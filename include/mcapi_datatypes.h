@@ -113,6 +113,14 @@ typedef int mcapi_priority_t;
 typedef int mcapi_timeout_t;
 typedef int mcapi_endpoint_t;
 typedef int mcapi_status_t;
+typedef enum {
+  OTHER_REQUEST,
+  OPEN_PKTCHAN,
+  OPEN_SCLCHAN,
+  SEND,
+  RECV,
+  GET_ENDPT
+} mcapi_request_type;
 typedef struct {
   int valid;
   int size;

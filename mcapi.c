@@ -590,3 +590,95 @@ void mcapi_msg_recv(
   }
 }
 
+mcapi_boolean_t mcapi_test(
+        MCAPI_IN mcapi_request_t* request, 
+        MCAPI_OUT size_t* size, 
+        MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+  mcapi_boolean_t rc = MCAPI_FALSE;
+  
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_INCOMPLETE;  
+    if (! valid_size_param(size)) {
+      *mcapi_status = MCAPI_EPARAM;
+       rc = MCAPI_TRUE;
+    } else {
+      rc = mcapi_trans_test_i(request,size,mcapi_status);
+    }
+  }
+  return rc;
+}
+
+mcapi_uint_t mcapi_msg_available(
+		MCAPI_IN mcapi_endpoint_t receive_endpoint, 
+		MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+	mcapi_uint_t rc = 0;
+	if (! valid_status_param(mcapi_status)) {
+		if (mcapi_status != NULL) {
+			*mcapi_status = MCAPI_EPARAM;
+		}
+	} else {
+		*mcapi_status = MCAPI_SUCCESS;
+		if( !mcapi_trans_valid_endpoint(receive_endpoint)) {
+			*mcapi_status = MCAPI_ENOT_ENDP;
+		} else {
+			rc = mcapi_trans_msg_available(receive_endpoint);
+		}
+	}
+	return rc;
+}
+
+mcapi_boolean_t mcapi_wait(
+        MCAPI_IN mcapi_request_t* request, 
+        MCAPI_OUT size_t* size, 
+        MCAPI_OUT mcapi_status_t* mcapi_status, 
+        MCAPI_IN mcapi_timeout_t timeout)
+{
+  mcapi_boolean_t rc = MCAPI_FALSE;
+ 
+   if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! valid_size_param(size)) {
+      *mcapi_status = MCAPI_EPARAM;
+      rc = MCAPI_TRUE;
+    } else {
+      rc = mcapi_trans_wait(request,size,mcapi_status,timeout);
+    }
+  }
+  return rc;
+}
+
+mcapi_int_t mcapi_wait_any(
+        MCAPI_IN size_t number, 
+        MCAPI_IN mcapi_request_t** requests, 
+        MCAPI_OUT size_t* size, 
+        MCAPI_OUT mcapi_status_t* mcapi_status, 
+        MCAPI_IN mcapi_timeout_t timeout)
+{
+  mcapi_boolean_t rc = MCAPI_FALSE;
+  
+  if (! valid_status_param(mcapi_status)) {
+    if (mcapi_status != NULL) {
+      *mcapi_status = MCAPI_EPARAM;
+    }
+  } else {
+    *mcapi_status = MCAPI_SUCCESS; 
+    if (! valid_size_param(size)) {
+      *mcapi_status = MCAPI_EPARAM;
+      rc = MCAPI_TRUE;
+    } else {
+      rc = mcapi_trans_wait_any(number,requests,size,mcapi_status,timeout);
+    }
+  }
+  return rc;
+}
+

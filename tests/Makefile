@@ -6,14 +6,15 @@ LD = bfin-uclinux-ld
 CFLAGS  ?=
 CFLAGS  += -I$(PWD)/../include
 PWD:= $(shell pwd)
+LIB:=$(PWD)/../.libs/libmcapi.a
 
 all: endpoints1 msg1
 
-endpoints1: endpoints1.o
-	$(CC) $(LDFLAGS) $< $(PWD)/../.libs/libmcapi.a -o $@ > $@.map
+endpoints1: endpoints1.o $(LIB)
+	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
 
-msg1: msg1.o
-	$(CC) $(LDFLAGS) $< $(PWD)/../.libs/libmcapi.a -o $@ > $@.map
+msg1: msg1.o $(LIB)
+	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
 clean:
 	rm -rf *.o *.map *.gdb 
 

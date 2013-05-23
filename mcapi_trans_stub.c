@@ -584,8 +584,15 @@ void mcapi_trans_msg_send_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
 
 	index = se;
-	ret = sm_send_packet(index, re, rn, buffer, buffer_size);
 
+	mcapi_dprintf(1,"index %d, re %d, rn %d\n", index, re, rn);
+	ret = sm_send_packet(index, re, rn, buffer, buffer_size);
+	if (ret) {
+		mcapi_dprintf(1,"send failed\n");
+		*mcapi_status = ret;
+	}
+
+	*mcapi_status = MCAPI_SUCCESS;
 }
 
 
@@ -603,16 +610,21 @@ void mcapi_trans_msg_recv_i( mcapi_endpoint_t  receive_endpoint,  char* buffer, 
 	uint16_t rn,re;
 	int ret;
 	int index;
-	char *buf_p;
 	uint32_t len;
 	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
 
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
 
 	index = re;
-	ret = sm_recv_packet(index,&sn, &se, &buf_p, &len);
 
-//	memcpy(buffer, buf_p, len);
+	ret = sm_recv_packet(index,&sn, &se, buffer, &len);
+	if (ret) {
+		mcapi_dprintf(1,"recv failed\n");
+		*mcapi_status = ret;
+	}
+	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
+	mcapi_dprintf(1,"buffer %s\n", buffer);
+	*mcapi_status = MCAPI_SUCCESS;
 }
 
 
@@ -624,11 +636,19 @@ mcapi_boolean_t mcapi_trans_msg_recv( mcapi_endpoint_t  receive_endpoint,  char*
 
 
 
-mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endoint)
+mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 {
-  return 0;
+	uint16_t rn,re;
+	int index;
+	int ret;
+	mcapi_uint_t avail = 0;
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+	ret = sm_get_session_status(index, &avail, NULL, NULL);
+	if (ret)
+		return ret;
+	mcapi_dprintf(1, "%s avail = %d\n", __func__, avail);
+	return avail;
 }
-
 
 
 /****************** channels general ****************************/
@@ -680,7 +700,9 @@ mcapi_boolean_t mcapi_trans_pktchan_recv( mcapi_pktchan_recv_hndl_t receive_hand
 
 mcapi_uint_t mcapi_trans_pktchan_available( mcapi_pktchan_recv_hndl_t   receive_handle)
 {
-  return 0;
+	mcapi_uint_t avail;
+	avail = mcapi_trans_msg_available(receive_handle);
+	return avail;
 }
 
 
@@ -739,7 +761,9 @@ mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_hand
 
 mcapi_uint_t mcapi_trans_sclchan_available_i( mcapi_sclchan_recv_hndl_t receive_handle)
 {
-  return 0;
+	mcapi_uint_t avail;
+	avail = mcapi_trans_msg_available(receive_handle);
+	return avail;
 }
 
 
@@ -759,12 +783,52 @@ void mcapi_trans_sclchan_send_close_i( mcapi_sclchan_send_hndl_t send_handle,mca
 /****************** test,wait & cancel ****************************/
 mcapi_boolean_t mcapi_trans_test_i( mcapi_request_t* request, size_t* size,mcapi_status_t* mcapi_status)
 {
+	mcapi_boolean_t rc;
+	rc = MCAPI_FALSE;
+	uint16_t rn,re;
+	int index;
+	int ret;
+	mcapi_uint_t avail = 0;
+	mcapi_uint_t uncomplete = 0;
+	mcapi_uint_t status = 0;
+
+	if (request->valid == MCAPI_FALSE) {
+		*mcapi_status = MCAPI_ENOTREQ_HANDLE;
+		rc = MCAPI_FALSE;
+	} else if (request->cancelled) {
+		*mcapi_status = MCAPI_EREQ_CANCELED;
+		rc = MCAPI_FALSE;
+	} else if (!(request->completed)) {
+		/* try to complete the request */
+		/*  receives to an empty channel or get_endpt for an endpt that
+		    doesn't yet exist are the only two types of non-blocking functions
+		    that don't complete immediately for this implementation */
+		assert(mcapi_trans_decode_handle_internal(request->handle,&rn,&re));
+		index = re;
+		ret = sm_get_session_status(index, &avail, &uncomplete, &status);
+		if (ret)
+			return ret;
+
+		switch (request->type) {
+			case (RECV) :
+			case (GET_ENDPT) :
+			default:
+				assert(0);
+				break;
+		};
+	}
+
   return MCAPI_FALSE;
 }
 
 
 
 mcapi_boolean_t mcapi_trans_wait( mcapi_request_t* request, size_t* size,mcapi_status_t* mcapi_status)
+{
+  return MCAPI_FALSE;
+}
+
+mcapi_boolean_t mcapi_trans_wait_any( mcapi_request_t* request, size_t* size,mcapi_status_t* mcapi_status)
 {
   return MCAPI_FALSE;
 }
