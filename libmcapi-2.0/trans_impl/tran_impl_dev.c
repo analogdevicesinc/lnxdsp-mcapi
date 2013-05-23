@@ -238,7 +238,7 @@ void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
 
 	index = mcapi_trans_get_port_index(sn, se);
-	if (index >= MAX_ENDPOINTS) {
+	if (index >= MCAPI_MAX_ENDPOINTS) {
 		return;
 	}
 
@@ -254,9 +254,9 @@ void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
 		return;
 	} else {
 		/* update the send endpoint */
-		c_db->nodes[0].node_d.endpoints[index].connected = MCAPI_TRUE;
-		c_db->nodes[0].node_d.endpoints[index].recv_endpt = receive_endpoint;
-		c_db->nodes[0].node_d.endpoints[index].type = type;
+		c_db->domains[0].nodes[0].node_d.endpoints[index].connected = MCAPI_TRUE;
+		c_db->domains[0].nodes[0].node_d.endpoints[index].recv_queue.recv_endpt = receive_endpoint;
+		c_db->domains[0].nodes[0].node_d.endpoints[index].recv_queue.channel_type = type;
 
 		printf("%s %d connected %d\n", __func__, send_endpoint, receive_endpoint);
 	}
