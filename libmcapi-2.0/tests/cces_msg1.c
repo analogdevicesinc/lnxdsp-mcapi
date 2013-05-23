@@ -122,5 +122,7 @@ int main () {
 
   printf("CoreA Test PASSED\n");
 
+  fflush(stdout);
+  close(STDOUT_FILENO);
   return 0;
 }
