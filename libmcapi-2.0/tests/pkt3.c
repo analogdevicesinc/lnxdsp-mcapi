@@ -162,7 +162,7 @@ void do_child()
 		free(save_buf[s]);
 	}
 
-	if (pass_num == NUM_SIZES) {
+	if (pass_num == NUM_SIZES - 1) {
     	printf("Child Test PASSED\n");
   	} else {
     	printf("Child Test FAILED\n");
