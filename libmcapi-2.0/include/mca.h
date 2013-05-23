@@ -36,7 +36,7 @@ extern "C" {
 #define MCA_MAX_DOMAINS 2
 
 /* Defined and set to $max_nodes. */
-#define MCA_MAX_NODES 16
+#define MCA_MAX_NODES 2
 
 /* Defined and set to 1 if we're including debug print support. */
 #define WITH_DEBUG 1
