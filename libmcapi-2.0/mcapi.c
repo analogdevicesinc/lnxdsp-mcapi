@@ -2261,7 +2261,7 @@ mcapi_uint32_t mcapi_sclchan_recv_uint32(
   } else if (! mcapi_trans_sclchan_recv (receive_handle,&dataword,exp_size)) {
     *mcapi_status = MCAPI_ERR_SCL_SIZE;
   } 
-  return dataword;
+  return (uint32_t)dataword;
 }
 
 
@@ -2311,7 +2311,7 @@ mcapi_uint16_t mcapi_sclchan_recv_uint16(
   } else if (! mcapi_trans_sclchan_recv (receive_handle,&dataword,exp_size)) {  
     *mcapi_status = MCAPI_ERR_SCL_SIZE;
   } 
-  return dataword;
+  return (uint16_t)dataword;
 }
 
 
@@ -2360,7 +2360,7 @@ mcapi_uint8_t mcapi_sclchan_recv_uint8(
   } else if (! mcapi_trans_sclchan_recv (receive_handle,&dataword,exp_size)) {
     *mcapi_status = MCAPI_ERR_SCL_SIZE;
   }
-  return dataword;
+  return (uint8_t)dataword;
 }
 
 

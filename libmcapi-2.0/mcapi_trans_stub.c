@@ -1604,14 +1604,19 @@ mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_hand
 	if (ret) {
 		mcapi_dprintf(1,"send failed\n");
 	} 
+
 	received_size = type;
 	switch (received_size) {
 	case 1:
 	case 2:
 	case 4:
-		*data = scalar0;
+		*data = (uint64_t)scalar0;
+		break;
 	case 8:
 		*data = ((uint64_t )scalar0 << 32) | scalar1;
+		break;
+	default:
+		return MCAPI_FALSE;
 	}
 
 	if (size != received_size)
