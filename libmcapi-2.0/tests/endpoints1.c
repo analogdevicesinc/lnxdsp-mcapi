@@ -5,7 +5,6 @@
 */
 
 #include <mcapi.h>
-#include <mcapi_datatypes.h>
 #include <stdio.h>
 #include <stdlib.h> /* for exit */
 
