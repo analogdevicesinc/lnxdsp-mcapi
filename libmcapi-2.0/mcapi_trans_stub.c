@@ -176,7 +176,9 @@ mcapi_boolean_t transport_sm_create_shared_mem(void** addr,uint32_t shmkey,uint3
 
 mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
 {
+	int rval;
 	struct shmid_ds shmid_struct;
+	struct shmid_ds dsbuf;
 
 	/* detach the shared memory segment */
 	int rc = shmdt(shm_address);
@@ -185,11 +187,21 @@ mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
 		return MCAPI_FALSE;
 	}
 
-	/* delete the shared memory id */
-	rc = shmctl(shmid, IPC_RMID, &shmid_struct);
-	if (rc==-1)  {
-		mcapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmctl() failed\n");
+	rval = shmctl(shmid, IPC_STAT, &dsbuf);
+	if (rval != 0) {
+		shmdt(shm_addr);
 		return MCAPI_FALSE;
+	}
+
+	/* if we are the first to attach, then initialize the segment to 0 */
+	if (dsbuf.shm_nattch == 0) {
+		/* delete the shared memory id */
+		rc = shmctl(shmid, IPC_RMID, &shmid_struct);
+		if (rc==-1)  {
+			mcapi_dprintf(1,"Warning: mrapi: sysvr4_free_shared_mem shmctl() failed\n");
+			return MCAPI_FALSE;
+		}
+
 	}
 	return MCAPI_TRUE;
 
@@ -867,6 +879,10 @@ void mcapi_trans_finalize()
 	void *shm_addr = c_db;
 	uint32_t shmkey = ftok(SEMKEYPATH,SEMKEYID);
 	uint32_t shmid = shmget(shmkey, sizeof(mcapi_database), 0666); 
+	if (shmid == -1) {
+		mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
+		return;
+	}
 	transport_sm_free_shared_mem(shmid,shm_addr);
 }
 

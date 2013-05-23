@@ -319,6 +319,7 @@ void mcapi_finalize(
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
   *mcapi_status = MCAPI_SUCCESS;
+   printf("%s %d\n", __func__, __LINE__);
   if (!mcapi_trans_finalize()) {
     *mcapi_status = MCAPI_ERR_NODE_FINALFAILED;
   }
