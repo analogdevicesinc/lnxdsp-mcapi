@@ -23,7 +23,7 @@ void wrong(unsigned line)
 {
   fprintf(stderr,"WRONG: line=%u\n", line);
   fflush(stdout);
-  exit(1);
+  _exit(1);
 }
 
 mcapi_boolean_t send (mcapi_sclchan_send_hndl_t send_handle, mcapi_endpoint_t recv,unsigned long long data,uint32_t size,mcapi_status_t status,int exp_status) {

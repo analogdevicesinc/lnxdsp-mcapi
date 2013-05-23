@@ -30,7 +30,7 @@ void wrong(unsigned line)
 {
   fprintf(stderr,"WRONG: line=%u\n", line);
   fflush(stdout);
-  exit(1);
+  _exit(1);
 }
 
 mcapi_boolean_t send (mcapi_sclchan_send_hndl_t send_handle, mcapi_endpoint_t recv,unsigned long long data,uint32_t size,mcapi_status_t status,int exp_status) {
@@ -146,6 +146,7 @@ void do_child()
 
 	printf("Child Test PASSED\n");
 
+	close(STDOUT_FILENO);
         _exit(0);
 }
 
@@ -243,7 +244,6 @@ void do_parent(int pid)
   	} else {
     	printf("Parent Test FAILED\n");
 	fflush(stdout);
-	exit(1);
   	}
 }
 
@@ -299,5 +299,6 @@ int main (int ac, char **av) {
         }
     	printf("CoreA Test PASSED\n");
 	fflush(stdout);
+	close(STDOUT_FILENO);
 	return 0;
 }

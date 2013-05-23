@@ -32,7 +32,7 @@ void wrong(unsigned line)
 {
   fprintf(stderr,"WRONG: line=%u\n", line);
   fflush(stdout);
-  exit(1);
+  _exit(1);
 }
 
 struct message_hdr {
@@ -168,9 +168,10 @@ void do_child()
     	printf("Child Test PASSED\n");
   	} else {
     	printf("Child Test FAILED\n");
-	exit(1);
-  	}
-
+	_exit(1);
+	}
+	fflush(stdout);
+	close(STDOUT_FILENO);
         _exit(0);
 }
 
@@ -305,7 +306,7 @@ void do_parent(int pid)
     	printf("Parent Test PASSED\n");
   	} else {
     	printf("Parent Test FAILED\n");
-	exit(1);
+	_exit(1);
   	}
 }
 
@@ -352,7 +353,10 @@ int main (int ac, char **av) {
 
 	}
 
-    	printf("CoreA Test PASSED\n");
+	printf("CoreA Test PASSED\n");
+	fflush(stdout);
+	close(STDOUT_FILENO);
+
 
 	return 0;
 }

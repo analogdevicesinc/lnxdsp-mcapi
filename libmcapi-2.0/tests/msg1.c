@@ -22,7 +22,7 @@ void wrong(unsigned line)
 {
   fprintf(stderr,"WRONG: line=%u\n", line);
   fflush(stdout);
-  exit(1);
+  _exit(1);
 }
 char send_buf[32] = "";
 char send_string[] = "HELLO_MCAPI";

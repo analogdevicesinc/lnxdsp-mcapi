@@ -28,7 +28,7 @@ void wrong(unsigned line)
 {
   fprintf(stderr,"WRONG: line=%u\n", line);
   fflush(stdout);
-  exit(1);
+  _exit(1);
 }
 
 void send (mcapi_endpoint_t send, mcapi_endpoint_t recv,char* msg,mcapi_status_t status,int exp_status) {
@@ -123,7 +123,7 @@ void do_child()
 	sleep(2);
   }
 #endif
-	sleep(5);
+	sleep(8);
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
 
@@ -132,6 +132,8 @@ void do_child()
 	free(send_buf);
 	printf("Child Test PASSED\n");
 
+        fflush(stdout);
+	close(STDOUT_FILENO);
         _exit(0);
 }
 
@@ -223,7 +225,7 @@ void do_parent(int pid)
     	printf("Parent Test PASSED\n");
   	} else {
     	printf("Parent Test FAILED\n");
-	exit(1);
+	_exit(1);
   	}
 }
 
@@ -273,5 +275,7 @@ int main (int ac, char **av) {
 	}		
 
     	printf("CoreA Test PASSED\n");
+        fflush(stdout);
+	close(STDOUT_FILENO);
 	return 0;
 }

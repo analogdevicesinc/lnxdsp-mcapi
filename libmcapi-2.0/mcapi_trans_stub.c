@@ -849,8 +849,7 @@ mcapi_boolean_t mcapi_trans_initialize_()
 		}
 
 		c_db = shm_addr; 
-		memset(c_db, 0, sizeof(mcapi_database));
-		mcapi_dprintf(1, "%s %d db size %x\n", __func__, __LINE__, sizeof(mcapi_database));
+		mcapi_dprintf(1, "%s %d db addr %08x size %x\n", __func__, __LINE__, c_db, sizeof(mcapi_database));
 
 	}
 	transport_sm_unlock_semaphore(sem_id);
@@ -1095,7 +1094,7 @@ void mcapi_trans_msg_send_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  
 
 	index = mcapi_trans_get_port_index(sn, se);
 
-	mcapi_dprintf(1,"index %d, re %d, rn %d\n", index, se, sn);
+	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
 
 	if (index >= MCAPI_MAX_ENDPOINTS) {
 		*mcapi_status = MCAPI_FALSE;
