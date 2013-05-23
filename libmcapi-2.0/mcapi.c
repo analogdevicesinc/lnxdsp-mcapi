@@ -36,7 +36,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <mcapi.h>
-#include <mcapi_trans.h>
 #include <string.h> /* for strncpy */
 
 /* FIXME: (errata B5) anyone can get an endpoint handle and call receive on it.  should
@@ -1063,13 +1062,17 @@ void mcapi_pktchan_connect_i(
   
   *mcapi_status = MCAPI_SUCCESS;
   if ( ! mcapi_trans_valid_endpoints(send_endpoint,receive_endpoint)) {
+      printf("%s() %d\n", __func__, __LINE__);
     *mcapi_status = MCAPI_ERR_ENDP_INVALID;
   } else if (( mcapi_trans_channel_connected (send_endpoint)) ||  
              ( mcapi_trans_channel_connected (receive_endpoint))) {
+      printf("%s() %d\n", __func__, __LINE__);
     *mcapi_status = MCAPI_ERR_CHAN_CONNECTED;
   } else if (! mcapi_trans_compatible_endpoint_attributes (send_endpoint,receive_endpoint)) {
+      printf("%s() %d\n", __func__, __LINE__);
     *mcapi_status = MCAPI_ERR_ATTR_INCOMPATIBLE;
   } 
+      printf("%s() %d\n", __func__, __LINE__);
     mcapi_trans_pktchan_connect_i (send_endpoint,receive_endpoint,request,mcapi_status);
 }
   
@@ -2006,17 +2009,18 @@ MCAPI_ERR_PARAMETER
 ***********************************************************************/
 
 void mcapi_sclchan_send_uint64(
- 	MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,  
- 	MCAPI_IN mcapi_uint64_t dataword, 
- 	MCAPI_OUT mcapi_status_t* mcapi_status)
+		MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,
+		MCAPI_IN mcapi_uint64_t dataword,
+		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  /* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
-  *mcapi_status = MCAPI_SUCCESS; 
-  if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
-    *mcapi_status = MCAPI_ERR_CHAN_INVALID;
-  }  else if (!mcapi_trans_sclchan_send (send_handle,dataword,8)) {
-    *mcapi_status = MCAPI_ERR_MEM_LIMIT;  /* MR: added this  */
-  } 
+	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
+	*mcapi_status = MCAPI_SUCCESS;
+	if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
+		*mcapi_status = MCAPI_ERR_CHAN_INVALID;
+	}  else if (!mcapi_trans_sclchan_send (send_handle,dataword,8)) {
+
+		*mcapi_status = MCAPI_ERR_MEM_LIMIT;  /* MR: added this  */
+	}
 }
 
 
@@ -2053,25 +2057,26 @@ MCAPI_ERR_PARAMETER
 ***********************************************************************/
 
 void mcapi_sclchan_send_uint32(
- 	MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,  
- 	MCAPI_IN mcapi_uint32_t dataword, 
- 	MCAPI_OUT mcapi_status_t* mcapi_status)
+		MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,
+		MCAPI_IN mcapi_uint32_t dataword,
+		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  /* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
-  if (! mcapi_trans_valid_status_param(mcapi_status)) {
-    if (mcapi_status != MCAPI_NULL) {
-      *mcapi_status = MCAPI_ERR_PARAMETER;
-    }
-  } else {
-    *mcapi_status = MCAPI_SUCCESS; 
-    if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
-      *mcapi_status = MCAPI_ERR_CHAN_INVALID;
-    }  else if (!mcapi_trans_sclchan_send (send_handle,dataword,4)) {
-      *mcapi_status = MCAPI_ERR_MEM_LIMIT;
-    } 
-  }
+	uint64_t tmp = (uint64_t)dataword;
+	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
+	if (! mcapi_trans_valid_status_param(mcapi_status)) {
+		if (mcapi_status != MCAPI_NULL) {
+			*mcapi_status = MCAPI_ERR_PARAMETER;
+		}
+	} else {
+		*mcapi_status = MCAPI_SUCCESS;
+		if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
+			*mcapi_status = MCAPI_ERR_CHAN_INVALID;
+		}  else if (!mcapi_trans_sclchan_send (send_handle,tmp,4)) {
+			*mcapi_status = MCAPI_ERR_MEM_LIMIT;
+		} 
+	}
 }
- 
+
 
 /************************************************************************
 mcapi_sclchan_send_uint16 - sends a (connected) 16-bit scalar on a channel.
@@ -2104,17 +2109,18 @@ MCAPI_ERR_PARAMETER
 ***********************************************************************/
 
 void mcapi_sclchan_send_uint16(
- 	MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,  
- 	MCAPI_IN mcapi_uint16_t dataword, 
- 	MCAPI_OUT mcapi_status_t* mcapi_status)
-{ 
-  /* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
-  *mcapi_status = MCAPI_SUCCESS;
-  if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
-    *mcapi_status = MCAPI_ERR_CHAN_INVALID;
-  }  else if (!mcapi_trans_sclchan_send (send_handle,dataword,2)) {
-    *mcapi_status = MCAPI_ERR_MEM_LIMIT; 
-  }
+		MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,
+		MCAPI_IN mcapi_uint16_t dataword,
+		MCAPI_OUT mcapi_status_t* mcapi_status)
+{
+	uint64_t tmp = (uint64_t)dataword;
+	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
+	*mcapi_status = MCAPI_SUCCESS;
+	if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
+		*mcapi_status = MCAPI_ERR_CHAN_INVALID;
+	}  else if (!mcapi_trans_sclchan_send (send_handle,tmp,2)) {
+		*mcapi_status = MCAPI_ERR_MEM_LIMIT;
+	}
 }
 
 
@@ -2148,17 +2154,18 @@ MCAPI_ERR_PARAMETER
 ***********************************************************************/
 
 void mcapi_sclchan_send_uint8(
- 	MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,  
- 	MCAPI_IN mcapi_uint8_t dataword, 
-        MCAPI_OUT mcapi_status_t* mcapi_status)
+		MCAPI_IN mcapi_sclchan_send_hndl_t send_handle,
+		MCAPI_IN mcapi_uint8_t dataword,
+		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  /* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
-  *mcapi_status = MCAPI_SUCCESS;
-  if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
-    *mcapi_status = MCAPI_ERR_CHAN_INVALID;
-  }  else if (!mcapi_trans_sclchan_send (send_handle,dataword,1)) {
-    *mcapi_status = MCAPI_ERR_MEM_LIMIT;    
-  }
+	uint64_t tmp = (uint64_t)dataword;
+	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
+	*mcapi_status = MCAPI_SUCCESS;
+	if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
+		*mcapi_status = MCAPI_ERR_CHAN_INVALID;
+	}  else if (!mcapi_trans_sclchan_send (send_handle,tmp,1)) {
+		*mcapi_status = MCAPI_ERR_MEM_LIMIT;
+	}
 }
 
 

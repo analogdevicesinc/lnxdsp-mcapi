@@ -371,6 +371,56 @@ mcapi_boolean_t mcapi_trans_add_node (mcapi_domain_t domain_id, mcapi_uint_t nod
 	return rc;
 }
 
+mcapi_boolean_t mcapi_trans_remove_request(int r) {
+
+	int temp_empty_head_index;
+	mcapi_boolean_t rc = MCAPI_FALSE;
+	indexed_array_header *header = &c_db->request_reserves_header;
+
+	if (header->curr_count < header->max_count) {
+		header->array[r].next_index = header->empty_head_index;
+		header->empty_head_index = r;
+		header->curr_count--;
+		rc = MCAPI_TRUE;
+	}
+	return rc; // if rc=false, then there is no request available (array is empty)
+}
+
+mcapi_boolean_t mcapi_trans_reserve_request(int *r) {
+
+	int temp_full_head_index;
+	mcapi_boolean_t rc = MCAPI_FALSE;
+	mcapi_database *mcapi_db = c_db;
+
+	indexed_array_header *header = &mcapi_db->request_reserves_header;
+
+	if (header->empty_head_index != -1) {
+		*r = header->empty_head_index;
+		mcapi_db->requests[*r].valid = MCAPI_TRUE;
+		header->empty_head_index = header->array[header->empty_head_index].next_index;
+		header->curr_count++;
+		rc = MCAPI_TRUE;
+	}
+	return rc;
+}
+
+void mcapi_trans_init_request_indexed_array() {
+	int i;
+	mcapi_database *mcapi_db = c_db;
+
+	mcapi_db->request_reserves_header.curr_count = 0;
+	mcapi_db->request_reserves_header.max_count = MCAPI_MAX_REQUESTS;
+	mcapi_db->request_reserves_header.empty_head_index = 0;
+	mcapi_db->request_reserves_header.full_head_index = -1;
+	for (i = 0; i < MCAPI_MAX_REQUESTS; i++) {
+		mcapi_db->request_reserves_header.array[i].next_index = i + 1;
+		mcapi_db->request_reserves_header.array[i].prev_index = i - 1;
+	}
+	mcapi_db->request_reserves_header.array[MCAPI_MAX_REQUESTS - 1].next_index = -1;
+	mcapi_db->request_reserves_header.array[0].prev_index = -1;
+
+}
+
 
 /***************************************************************************
 NAME:mcapi_trans_encode_handle_internal 
@@ -417,7 +467,7 @@ mcapi_boolean_t mcapi_trans_decode_handle_internal (uint32_t handle, uint16_t *d
 	*node_id = (handle >> MCAPI_NODE_SHIFT) & MCAPI_NODE_MASK;
 	*port_id = (handle >> MCAPI_PORT_SHIFT) & MCAPI_PORT_MASK;
 
-	mcapi_dprintf(1, "node %d endpoint %d\n", *node_id, *port_id);
+	mcapi_dprintf(1, "domain %d node %d endpoint %d\n", *domain_id, *node_id, *port_id);
 
 	rc = MCAPI_TRUE;
 
@@ -605,7 +655,7 @@ mcapi_boolean_t mcapi_trans_send_endpoint (mcapi_endpoint_t endpoint)
 /* checks if the given endpoints have compatible attributes */
 mcapi_boolean_t mcapi_trans_compatible_endpoint_attributes  (mcapi_endpoint_t send_endpoint, mcapi_endpoint_t recv_endpoint)
 {
-  return MCAPI_FALSE;
+  return MCAPI_TRUE;
 }
 
 
@@ -1115,6 +1165,7 @@ void mcapi_trans_pktchan_connect_i( mcapi_endpoint_t  send_endpoint, mcapi_endpo
 	uint16_t sd,sn,se,rd,rn,re;
 	int ret;
 	mcapi_uint_t status = 0;
+      printf("%s() %d send ep %x recv ep %x\n", __func__, __LINE__, send_endpoint, receive_endpoint);
 	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sd,&sn,&se));
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rd,&rn,&re));
 	mcapi_dprintf(1, "%s se %d re %d rn= %d\n", __func__, se, re, rn);
@@ -1245,20 +1296,11 @@ void mcapi_trans_pktchan_recv_i( mcapi_pktchan_recv_hndl_t receive_handle,  void
 		return;
 	}
 
-	/* find a free mcapi buffer (we only have to worry about this on the sending side) */
-	for (i = 0; i < MCAPI_MAX_BUFFERS; i++) {
-		if (!c_db->buffers[i].magic_num) {
-			c_db->buffers[i].magic_num = MAGIC_NUM;
-			db_buff = &c_db->buffers[i];
-			break;
-		}
+	if (!mcapi_trans_reserve_request(&i)) {
+		*mcapi_status = MCAPI_ERR_REQUEST_LIMIT;
+		return;
 	}
-	if (i == MCAPI_MAX_BUFFERS) {
-		/* we couldn't get a free buffer */
-		mcapi_dprintf(2," ERROR mcapi_trans_send_internal: No more buffers available - try freeing some buffers. \n");
-		return MCAPI_FALSE;
-	}
-
+	db_buff = &c_db->buffers[i];
 
 	ret = sm_recv_packet(index,&se, &sn, db_buff->buff, &len);
 	if (ret) {
@@ -1288,20 +1330,22 @@ mcapi_uint_t mcapi_trans_pktchan_available( mcapi_pktchan_recv_hndl_t   receive_
 	return avail;
 }
 
+#define container_of(ptr, type, member) ({                      \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+	        (type *)( (char *)__mptr - offsetof(type,member) );})
+
 mcapi_boolean_t mcapi_trans_pktchan_free( void* buffer)
 {
 	int rc = MCAPI_TRUE;
-	buffer_entry* b_e;
+	int i;
+	uint32_t offset;
 
-	/* optimization - just do pointer arithmetic on the buffer pointer to get
-	   the base address of the buffer_entry structure. */
-	b_e = buffer-9;
-	if (b_e->magic_num == MAGIC_NUM) {
-		memset(b_e,0,sizeof(buffer_entry));
-	} else {
-		/* didn't find the buffer */
+	if ((buffer >= c_db->buffers[0].buff) && (buffer <= c_db->buffers[MCAPI_MAX_BUFFERS].buff)) {
+		offset = ((uint32_t)buffer & (~(MCAPI_MAX_MSG_SIZE - 1))) - (uint32_t)c_db->buffers[0].buff;
+		i = offset / MCAPI_MAX_MSG_SIZE;
+		mcapi_trans_remove_request(i);
+	} else 
 		rc = MCAPI_FALSE;
-	}
 	return rc;
 }
 
@@ -1495,7 +1539,7 @@ mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
 	int index;
 	int rc = MCAPI_FALSE;
 
-	mcapi_dprintf(2,"  mcapi_trans_sclchan_send send_handle=%x\n",send_handle);
+	mcapi_dprintf(2,"  mcapi_trans_sclchan_send send_handle=%x size %d\n",send_handle, size);
 
 	assert(mcapi_trans_decode_handle_internal(send_handle,&sd,&sn,&se));
 
@@ -1526,9 +1570,10 @@ mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
 		break;
 	}
 
+	mcapi_dprintf(1,"size %d\n", size);
 	ret = sm_send_scalar(index, re, rn, scalar0, scalar1, size);
 	if (ret)
-		mcapi_dprintf(1,"send failed\n");
+		mcapi_dprintf(1,"send failed %x\n", ret);
 	return MCAPI_TRUE;
 }
 

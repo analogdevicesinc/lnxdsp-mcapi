@@ -6,12 +6,17 @@
 */
 
 #include <mcapi.h>
+#include <mca.h>
+#include <mcapi_test.h>
 #include <stdio.h>
 #include <stdlib.h> /* for malloc */
 #include <string.h>
-#include <mcapi_test.h>
+#include <mcapi_impl_spec.h>
 
-#define NUM_SIZES 4 
+#define NUM_SIZES 4
+#define BUFF_SIZE 64
+#define DOMAIN 0
+#define NODE 0
 
 #define WRONG wrong(__LINE__);
 void wrong(unsigned line)
@@ -69,6 +74,8 @@ mcapi_boolean_t recv (mcapi_sclchan_recv_hndl_t recv_handle,uint32_t size,mcapi_
 
 int main () {
 	mcapi_status_t status;
+	mcapi_param_t parms;
+	mcapi_info_t version;
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2;
 
@@ -83,29 +90,28 @@ int main () {
 	int sizes[NUM_SIZES] = {8,16,32,64};
 	uint64_t test_pattern = 0x1122334455667788ULL;
 	size_t size;
-	mcapi_version_t version;
 	mcapi_boolean_t rc = MCAPI_FALSE;
 
 	/* create a node */
-	mcapi_initialize(MASTER_NODE_NUM,&version,&status);
+	mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
 	/* create endpoints */
-	ep1 = mcapi_create_endpoint (MASTER_PORT_NUM1,&status);
+	ep1 = mcapi_endpoint_create(MASTER_PORT_NUM1,&status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 	printf("ep1 %x   \n", ep1);
 
-	ep2 = mcapi_get_endpoint(SLAVE_NODE_NUM, SLAVE_PORT_NUM1, &status);
+	ep2 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM1,MCA_INFINITE, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
 
 	/*************************** connect the channels *********************/
-	mcapi_connect_sclchan_i(ep1,ep2,&request, &status);
+	mcapi_sclchan_connect_i(ep1,ep2,&request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
 
 	/*************************** open the channels *********************/
-	mcapi_open_sclchan_send_i(&s1 /*send_handle*/,ep1, &request, &status);
+	mcapi_sclchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
 
 	sleep(1);
@@ -115,9 +121,8 @@ int main () {
 		size = sizes[s];
 		/* send and recv messages on the channels */
 		/* regular endpoints */
-		rc = send (s1,ep2,test_pattern,64,status,MCAPI_SUCCESS);
+		rc = send (s1,ep2,test_pattern,size,status,MCAPI_SUCCESS);
 		if (!rc) {WRONG}
-		break;
 	}
 
 	mcapi_sclchan_send_close_i(s1,&request,&status); 

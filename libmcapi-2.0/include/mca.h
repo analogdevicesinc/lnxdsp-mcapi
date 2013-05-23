@@ -15,7 +15,7 @@ extern "C" {
 #define MCAPI_MAX_ATTRIBUTES 2
 
 /* Defined and set to $max_buffers. */
-#define MCAPI_MAX_BUFFERS 1284
+#define MCAPI_MAX_BUFFERS 64
 
 /* Defined and set to $max_channels. */
 #define MCAPI_MAX_CHANNELS 32
@@ -46,7 +46,7 @@ extern "C" {
 
 
 
-#define MCA_MAX_REQUESTS 1024
+#define MCA_MAX_REQUESTS MCAPI_MAX_BUFFERS
 typedef unsigned mca_request_t;
 
 /*

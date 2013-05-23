@@ -68,9 +68,6 @@ extern "C" {
 /* NOTE: if you change the buffer_entry data structure then you also
    need to update the pointer arithmetic in mcapi_trans_pktchan_free */
 typedef struct {
-  uint32_t magic_num;
-  size_t size; /* size (in bytes) of the buffer */
-  uint64_t scalar;
   char buff [MCAPI_MAX(MCAPI_MAX_PKT_SIZE,MCAPI_MAX_MSG_SIZE)]; // the buffer is used for both pkts and msgs
 } buffer_entry;
 
@@ -169,8 +166,6 @@ typedef struct {
   domain_entry domains[MCA_MAX_DOMAINS];
   buffer_entry buffers [MCAPI_MAX_BUFFERS];
   mcapi_request_data requests[MCAPI_MAX_REQUESTS];
-  // global header and array that we keep all requests
-  indexed_array_node request_reserves[MCAPI_MAX_REQUESTS];
   indexed_array_header request_reserves_header;
   uint16_t num_domains;
 } mcapi_database;

@@ -154,6 +154,7 @@ int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
 		break;
 	}
 
+	printf("%s size %d type %x \n", __func__, size, pkt.type);
 	ret = ioctl(fd, CMD_SM_SEND, &pkt);
 	return ret;
 }
@@ -226,16 +227,16 @@ int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_
 void mcapi_trans_connect_channel_internal (mcapi_endpoint_t send_endpoint,
 		mcapi_endpoint_t receive_endpoint,channel_type type)
 {
-	uint16_t sn,se;
-	uint16_t rn,re;
+	uint16_t sd,sn,se;
+	uint16_t rd,rn,re;
 	int index;
 	int ret;
 	uint32_t icc_type;
 
 	/* the database should already be locked */
 
-	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
-	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
+	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sd,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rd,&rn,&re));
 
 	index = mcapi_trans_get_port_index(sn, se);
 	if (index >= MCAPI_MAX_ENDPOINTS) {

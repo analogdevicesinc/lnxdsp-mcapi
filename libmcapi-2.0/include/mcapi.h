@@ -660,27 +660,27 @@ extern void mcapi_sclchan_send_close_i(
 /* Non-blocking management functions */
 
 extern mcapi_boolean_t mcapi_test(
-                                  /*MCAPI_IN*/ mcapi_request_t* request,
+	MCAPI_IN mcapi_request_t* request,
 	MCAPI_OUT size_t* size,
- 	MCAPI_OUT mcapi_status_t* mcapi_status);
+	MCAPI_OUT mcapi_status_t* mcapi_status);
 
 extern mcapi_boolean_t mcapi_wait(
-                                  /*MCAPI_IN*/ mcapi_request_t* request,
+	MCAPI_IN mcapi_request_t* request,
 	MCAPI_OUT size_t* size,
 	MCAPI_IN mcapi_timeout_t timeout,
 	MCAPI_OUT mcapi_status_t* mcapi_status
 );
 
 extern unsigned int mcapi_wait_any(
-                                    MCAPI_IN size_t number,
-                                    /*MCAPI_IN*/ mcapi_request_t** requests,
+	MCAPI_IN size_t number,
+	MCAPI_IN mcapi_request_t** requests,
 	MCAPI_OUT size_t* size,
 	MCAPI_IN mcapi_timeout_t timeout,
 	MCAPI_OUT mcapi_status_t* mcapi_status
 );
 
 extern void mcapi_cancel(
-                         /*MCAPI_IN*/ mcapi_request_t* request,
+	MCAPI_IN mcapi_request_t* request,
 	MCAPI_OUT mcapi_status_t* mcapi_status
 );
 
