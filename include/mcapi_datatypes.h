@@ -130,7 +130,8 @@ typedef struct {
   int cancelled;
   int handle;
   int status;
-  int endpoint;
+  int recv_endpoint;
+  int send_endpoint;
 } mcapi_request_t;
 
 /* internal handles */

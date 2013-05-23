@@ -5,13 +5,10 @@
 
 #include <mcapi.h>
 #include <mcapi_datatypes.h>
+#include <mcapi_test.h>
 #include <stdio.h>
 #include <stdlib.h> /* for malloc */
 #include <string.h>
-
-#define NODE_NUM 1
-#define PORT_NUM1 101
-#define PORT_NUM2 200
 
 #define BUFF_SIZE 64
 
@@ -58,21 +55,22 @@ int main () {
   mcapi_uint_t avail;
 
   /* create a node */
-  mcapi_initialize(NODE_NUM,&version,&status);
+  mcapi_initialize(MASTER_NODE_NUM,&version,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
     
   /* create endpoints */
-  ep1 = mcapi_create_endpoint (PORT_NUM1,&status);
+  ep1 = mcapi_create_endpoint (MASTER_PORT_NUM1,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("ep1 %x   \n", ep1);
- ep2 = mcapi_get_endpoint(100, 5, &status);
+ ep2 = mcapi_get_endpoint(SLAVE_NODE_NUM, SLAVE_PORT_NUM1, &status);
   if (status != MCAPI_SUCCESS) { WRONG }
 
-#if 1
+  printf("ep2 %x   \n", ep2);
   /* send and recv messages on the endpoints */
   /* regular endpoints */
   send (ep1,ep2,"1Hello MCAPI",status,MCAPI_SUCCESS);
   
+#if 1
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
 	if (avail > 0) {
