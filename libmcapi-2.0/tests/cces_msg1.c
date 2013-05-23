@@ -34,7 +34,10 @@ void recv (mcapi_endpoint_t recv,mcapi_status_t status,int exp_status) {
   mcapi_msg_recv_i(recv,buffer,BUFF_SIZE,&request,&status);
   if (status != exp_status) { WRONG}
   if (status == MCAPI_SUCCESS) {
-    printf("endpoint=%i has received: [%s]\n",(int)recv,buffer);
+  int i;
+  printf("DSP data after precessing\n");
+  for (i = 0; i < 128; i++)
+ 	printf("%x", buffer[i]);
   }
 }
 
@@ -73,6 +76,7 @@ int main () {
   /* send and recv messages on the endpoints */
   /* regular endpoints */
 
+  /* send DSP command */
   cmd = 1;
 
   mcapi_msg_send_i(ep1,ep2,&cmd,4,1,&request,&status);
@@ -82,14 +86,22 @@ int main () {
   }
 
   for (i = 0; i < 128; i++)
-	  dsp_data[i] = i;
+	  dsp_data[i] = i + 30;
 
+
+  printf("DSP data before\n");
+  for (i = 0; i < 128; i++)
+ 	printf("%x", dsp_data[i]);
+
+  /* send DSP data */
   mcapi_msg_send_i(ep1,ep3,dsp_data,128,1,&request,&status);
   if (status != MCAPI_SUCCESS) { WRONG}
   if (status == MCAPI_SUCCESS) {
     printf("endpoint=%i has sent: [%x]\n",(int)ep1,cmd);
   }
 
+
+  /* send DSP command process dataa*/
   cmd = 4;
 
   mcapi_msg_send_i(ep1,ep2,&cmd,4,1,&request,&status);
@@ -101,6 +113,7 @@ int main () {
 
   sleep(1);
 
+  /* recv DSP data */
  recv(ep4, &status, MCAPI_SUCCESS);
 
   mcapi_endpoint_delete(ep1,&status);
