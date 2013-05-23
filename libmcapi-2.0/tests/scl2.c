@@ -138,6 +138,10 @@ void do_child()
 
 	mcapi_sclchan_send_close_i(s1,&request,&status);
 
+	mcapi_endpoint_delete(ep1,&status);
+	if (status != MCAPI_SUCCESS) { WRONG }
+
+
 	mcapi_finalize(&status);
 
 	printf("Child Test PASSED\n");

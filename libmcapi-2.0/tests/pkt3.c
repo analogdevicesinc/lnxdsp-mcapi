@@ -53,7 +53,7 @@ void do_child()
 	mcapi_sclchan_send_hndl_t s1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
         mcapi_sclchan_recv_hndl_t r1;
-	char send_string[] = "mcapi_pkt_2_process";
+	char send_string[] = "mcapi_pkt_3_process";
         void *pbuffer = NULL;
 	struct message_hdr send_msg;
 
@@ -112,8 +112,8 @@ void do_child()
 	save_buf[s] = malloc(BUFF_SIZE);
 	if (!save_buf[s])
 		WRONG;
-  	memset(send_buf[s], 1, BUFF_SIZE);
-  	memset(save_buf[s], 2, BUFF_SIZE);
+  	memset(send_buf[s], 0x20 + s, BUFF_SIZE);
+  	memset(save_buf[s], 0x20 + s + 1, BUFF_SIZE);
   	mcapi_pktchan_send_i(s1,&send_msg, sizeof(send_msg),&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA child: The %d time sending, status %d\n",s, status);
@@ -138,7 +138,9 @@ void do_child()
 
                   for (s = 0; s < NUM_SIZES; s++) {
 			  rc=memcmp(send_buf[s],save_buf[s],BUFF_SIZE);
-			  if (rc) { WRONG }
+			  if (rc) { 
+				printf("buffer addr %08x\n", send_buf[s]);
+			  WRONG }
 			  else {
 				printf("Child: the %d time data sent back from coreB are same with that from CoreA! \n",s);
 		  		pass_num++;}
@@ -155,14 +157,14 @@ void do_child()
 #endif
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-	mcapi_finalize(&status);
 
         for (s = 0; s < NUM_SIZES; s++) {
 		sm_release_uncached_buf(send_buf[s], BUFF_SIZE, 0);
 		free(save_buf[s]);
 	}
 
-	if (pass_num == NUM_SIZES - 1) {
+	mcapi_finalize(&status);
+	if (pass_num == NUM_SIZES) {
     	printf("Child Test PASSED\n");
   	} else {
     	printf("Child Test FAILED\n");
@@ -182,7 +184,7 @@ void do_parent(int pid)
 	mcapi_sclchan_send_hndl_t s0;
         mcapi_sclchan_recv_hndl_t r0;
 	mcapi_boolean_t rc = MCAPI_FALSE;
-	char send_string[] = "mcapi_pkt_2_process";
+	char send_string[] = "mcapi_pkt_3_process";
 	int stat_val;
         void *pbuffer = NULL;
 	mcapi_uint_t avail;
@@ -238,8 +240,8 @@ void do_parent(int pid)
 	save_buf[s] = malloc(BUFF_SIZE);
 	if (!save_buf[s])
 		WRONG;
-  	memset(send_buf[s], 1, BUFF_SIZE);
-  	memset(save_buf[s], 2, BUFF_SIZE);
+  	memset(send_buf[s], 0x10 + s, BUFF_SIZE);
+  	memset(save_buf[s], 0x10 + s + 1, BUFF_SIZE);
   	mcapi_pktchan_send_i(s0, &send_msg, sizeof(send_msg),&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA parent: The %d time sending, status %d\n",s, status);
@@ -265,7 +267,9 @@ void do_parent(int pid)
 
                   for (s = 0; s < NUM_SIZES; s++) {
 			  rc=memcmp(send_buf[s],save_buf[s],BUFF_SIZE);
-			  if (rc) { WRONG }
+			  if (rc) {
+				printf("buffer addr %08x\n", send_buf[s]);
+			  WRONG }
 			  else {
 			  	printf("Parent: the %d time data sent back from coreB are same with that from CoreA! ",s);
 		  		pass_num++;}
@@ -289,13 +293,14 @@ void do_parent(int pid)
 
         mcapi_endpoint_delete(ep1,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
-	mcapi_finalize(&status);
 
         for (s = 0; s < NUM_SIZES; s++) {
+    		printf("* Parent Test release buf\n");
 		sm_release_uncached_buf(send_buf[s], BUFF_SIZE, 0);
 		free(save_buf[s]);
 	}
 
+	mcapi_finalize(&status);
 	if (pass_num == NUM_SIZES) {
     	printf("Parent Test PASSED\n");
   	} else {

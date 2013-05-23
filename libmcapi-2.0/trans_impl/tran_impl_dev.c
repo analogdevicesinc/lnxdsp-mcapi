@@ -25,7 +25,7 @@ int sm_dev_initialize()
 	return fd;
 }
 
-void sm_dev_finalize(int fd)
+void sm_dev_finalize()
 {
 	close(fd);
 }
