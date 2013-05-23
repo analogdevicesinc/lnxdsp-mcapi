@@ -44,7 +44,9 @@ notice, this list of conditions and the following disclaimer.
 #include <mcapi_test.h>
 #include <icc.h>
 
-#include <stdio.h>
+#define COREB_MEMPOOL_START 0x3D00000
+#define MASTER_NODE_NUM 0
+#define SLAVE_NODE_NUM 1
 
 #define SEMKEYPATH "/dev/null"  /* Path used on ftok for semget key  */
 #define SEMKEYID 1              /* Id used on ftok for semget key    */
@@ -1257,7 +1259,6 @@ void mcapi_trans_pktchan_recv_i( mcapi_pktchan_recv_hndl_t receive_handle,  void
 		return MCAPI_FALSE;
 	}
 
-	index = re;
 
 	ret = sm_recv_packet(index,&se, &sn, db_buff->buff, &len);
 	if (ret) {
@@ -1563,7 +1564,7 @@ mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_hand
 		*data = ((uint64_t )scalar0 << 32) | scalar1;
 	}
 
-	if (size != received_size) {}
+	if (size != received_size)
 		return MCAPI_FALSE;
 
 	return MCAPI_TRUE;
