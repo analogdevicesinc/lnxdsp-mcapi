@@ -609,7 +609,7 @@ mcapi_boolean_t mcapi_trans_channel_connected  (mcapi_endpoint_t endpoint)
 	int index;
 	int ret;
 	uint32_t domain_index = 0;
-	mcapi_uint_t status = 0;
+	struct sm_session_status status;
 
 
 	assert(mcapi_trans_decode_handle_internal(endpoint,&d,&n,&e));
@@ -624,13 +624,18 @@ mcapi_boolean_t mcapi_trans_channel_connected  (mcapi_endpoint_t endpoint)
 	if (rc)
 		return rc;
 	else {
-		ret = sm_get_session_status(index, NULL, NULL, &status);
+		ret = sm_get_session_status(index, &status);
 		if (ret)
 			return MCAPI_FALSE;
-		mcapi_dprintf(1, "%s status = %d\n", __func__, status);
-		if (status == 1)
+		mcapi_dprintf(1, "%s status = %d\n", __func__, status.flags);
+
+		if (status.flags == MCAPI_TRUE) {
+			/* update ep status */
+			c_db->domains[0].nodes[0].node_d.endpoints[index].connected = MCAPI_TRUE;
+			c_db->domains[0].nodes[0].node_d.endpoints[index].recv_queue.recv_endpt = status.remote_ep;
+
 			return MCAPI_TRUE;
-		else
+		} else
 			return MCAPI_FALSE;
 	}
 
@@ -722,7 +727,7 @@ mcapi_boolean_t mcapi_trans_connected(mcapi_endpoint_t endpoint)
 	int rc;
 	int ret;
 	uint32_t domain_index = 0;
-	mcapi_uint_t status = 0;
+	struct sm_session_status status;
 
 	assert(mcapi_trans_decode_handle_internal(endpoint,&d,&n,&e));
 
@@ -736,11 +741,11 @@ mcapi_boolean_t mcapi_trans_connected(mcapi_endpoint_t endpoint)
 	if (rc)
 		return rc;
 	else {
-		ret = sm_get_session_status(index, NULL, NULL, &status);
+		ret = sm_get_session_status(index, &status);
 		if (ret)
 			return MCAPI_FALSE;
-		mcapi_dprintf(1, "%s status = %d\n", __func__, status);
-		if (status == 1)
+		mcapi_dprintf(1, "%s status = %d\n", __func__, status.flags);
+		if (status.flags == 1)
 			return MCAPI_TRUE;
 		else
 			return MCAPI_FALSE;
@@ -1139,7 +1144,7 @@ mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 	uint16_t rd,rn,re;
 	int index;
 	int ret;
-	mcapi_uint_t avail = 0;
+	struct sm_session_status status;
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rd,&rn,&re));
 	assert(rn == 0);
 
@@ -1149,11 +1154,11 @@ mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 		return -EINVAL;
 	}
 
-	ret = sm_get_session_status(index, &avail, NULL, NULL);
+	ret = sm_get_session_status(index, &status);
 	if (ret)
 		return ret;
-	mcapi_dprintf(1, "%s avail = %d\n", __func__, avail);
-	return avail;
+	mcapi_dprintf(1, "%s avail = %d\n", __func__, status.n_avail);
+	return status.n_avail;
 }
 
 
@@ -1626,7 +1631,7 @@ mcapi_boolean_t mcapi_trans_test_i( mcapi_request_t* request, size_t* size,mcapi
 	int ret;
 	mcapi_uint_t avail = 0;
 	mcapi_uint_t uncomplete = 0;
-	mcapi_uint_t status = 0;
+	struct sm_session_status status;
 
 #if 0
 	if (request->valid == MCAPI_FALSE) {
@@ -1647,16 +1652,16 @@ mcapi_boolean_t mcapi_trans_test_i( mcapi_request_t* request, size_t* size,mcapi
 			return MCAPI_FALSE;
 		}
 
-		ret = sm_get_session_status(index, &avail, &uncomplete, &status);
+		ret = sm_get_session_status(index, &status);
 		if (ret)
 			return ret;
 
 		switch (request->type) {
 			case (RECV) :
-				if (avail)
+				if (status.n_avail)
 					rc = MCAPI_TRUE;
 			case (SEND) :
-				if (!uncomplete)
+				if (!status.n_uncompleted)
 					rc = MCAPI_TRUE;
 			case (GET_ENDPT) :
 			default:

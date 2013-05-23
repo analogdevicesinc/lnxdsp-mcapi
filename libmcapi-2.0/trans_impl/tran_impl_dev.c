@@ -184,23 +184,18 @@ int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, ui
 	return ret;
 }
 
-int sm_get_session_status(uint32_t session_idx, uint32_t *avail, uint32_t *uncomplete, uint32_t *status)
+int sm_get_session_status(uint32_t session_idx, struct sm_session_status *status)
 {
 	int ret;
-	struct sm_session_status param;
+	if (!status)
+		return -EINVAL;
 	memset(&pkt, 0, sizeof(struct sm_packet));
-	memset(&param, 0, sizeof(param));
+	memset(status, 0, sizeof(*status));
 	pkt.session_idx = session_idx;
-	pkt.param = &param;
-	pkt.param_len = sizeof(param);
+	pkt.param = status;
+	pkt.param_len = sizeof(*status);
 	ret = ioctl(fd, CMD_SM_GET_SESSION_STATUS, &pkt);
 
-	if (avail)
-		*avail = param.avail;
-	if (uncomplete)
-		*uncomplete = param.uncomplete;
-	if (status)
-		*status = param.status;
 	return ret;
 }
 
