@@ -90,8 +90,9 @@ int main () {
 	  avail = mcapi_pktchan_available(r1, &status);
 	  if (avail > 0) {
 		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
-		  printf("RRRRRRRRRRRRr pktchan recv on coreA ok buffer %s, status %d\n",pbuffer,status);
+		  printf("pktchan recv on coreA ok buffer %s, status %d\n",pbuffer,status);
 		  mcapi_pktchan_release(pbuffer, &status);
+		  rc = 0;
 		  break;
 	  }
 	  sleep(2);
