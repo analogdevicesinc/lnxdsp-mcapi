@@ -1311,9 +1311,10 @@ void mcapi_trans_pktchan_recv_i( mcapi_pktchan_recv_hndl_t receive_handle,  void
 	db_buff = &c_db->buffers[i];
 
 	ret = sm_recv_packet(index,&se, &sn, db_buff->buff, &len);
-	if (ret) {
+	if (ret < 0) {
 		mcapi_dprintf(1,"recv failed\n");
-		*mcapi_status = ret;
+		*mcapi_status = MCAPI_FALSE;
+		return;
 	}
 	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
 	mcapi_dprintf(1,"buffer %s\n", buffer);
