@@ -162,7 +162,7 @@ int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
 int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, uint32_t *scalar0,
 		uint32_t *scalar1, uint32_t *size)
 {
-	int ret;
+	int ret = 0;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.type = SM_SESSION_SCALAR_READY_64;
@@ -181,7 +181,7 @@ int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, ui
 	if (size)
 		*size = pkt.type;
 
-	return ret;
+	return 1;
 }
 
 int sm_get_session_status(uint32_t session_idx, struct sm_session_status *status)
