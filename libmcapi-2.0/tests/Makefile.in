@@ -32,7 +32,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = msg1$(EXEEXT) pkt1$(EXEEXT) scl1$(EXEEXT)
+bin_PROGRAMS = endpoints1$(EXEEXT) msg1$(EXEEXT) pkt1$(EXEEXT) \
+	scl1$(EXEEXT) scl2$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -45,6 +46,9 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
+am_endpoints1_OBJECTS = endpoints1.$(OBJEXT)
+endpoints1_OBJECTS = $(am_endpoints1_OBJECTS)
+endpoints1_DEPENDENCIES = $(top_builddir)/libmcapi.la
 am_msg1_OBJECTS = msg1.$(OBJEXT)
 msg1_OBJECTS = $(am_msg1_OBJECTS)
 msg1_DEPENDENCIES = $(top_builddir)/libmcapi.la
@@ -54,6 +58,9 @@ pkt1_DEPENDENCIES = $(top_builddir)/libmcapi.la
 am_scl1_OBJECTS = scl1.$(OBJEXT)
 scl1_OBJECTS = $(am_scl1_OBJECTS)
 scl1_DEPENDENCIES = $(top_builddir)/libmcapi.la
+am_scl2_OBJECTS = scl2.$(OBJEXT)
+scl2_OBJECTS = $(am_scl2_OBJECTS)
+scl2_DEPENDENCIES = $(top_builddir)/libmcapi.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -66,8 +73,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(msg1_SOURCES) $(pkt1_SOURCES) $(scl1_SOURCES)
-DIST_SOURCES = $(msg1_SOURCES) $(pkt1_SOURCES) $(scl1_SOURCES)
+SOURCES = $(endpoints1_SOURCES) $(msg1_SOURCES) $(pkt1_SOURCES) \
+	$(scl1_SOURCES) $(scl2_SOURCES)
+DIST_SOURCES = $(endpoints1_SOURCES) $(msg1_SOURCES) $(pkt1_SOURCES) \
+	$(scl1_SOURCES) $(scl2_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -180,12 +189,16 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 INCLUDES = -I$(top_srcdir)/include
+endpoints1_SOURCES = endpoints1.c
+endpoints1_LDADD = $(top_builddir)/libmcapi.la
 msg1_SOURCES = msg1.c
 msg1_LDADD = $(top_builddir)/libmcapi.la
 pkt1_SOURCES = pkt1.c
 pkt1_LDADD = $(top_builddir)/libmcapi.la
 scl1_SOURCES = scl1.c
 scl1_LDADD = $(top_builddir)/libmcapi.la
+scl2_SOURCES = scl2.c
+scl2_LDADD = $(top_builddir)/libmcapi.la
 all: all-am
 
 .SUFFIXES:
@@ -247,6 +260,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
+endpoints1$(EXEEXT): $(endpoints1_OBJECTS) $(endpoints1_DEPENDENCIES) 
+	@rm -f endpoints1$(EXEEXT)
+	$(LINK) $(endpoints1_OBJECTS) $(endpoints1_LDADD) $(LIBS)
 msg1$(EXEEXT): $(msg1_OBJECTS) $(msg1_DEPENDENCIES) 
 	@rm -f msg1$(EXEEXT)
 	$(LINK) $(msg1_OBJECTS) $(msg1_LDADD) $(LIBS)
@@ -256,6 +272,9 @@ pkt1$(EXEEXT): $(pkt1_OBJECTS) $(pkt1_DEPENDENCIES)
 scl1$(EXEEXT): $(scl1_OBJECTS) $(scl1_DEPENDENCIES) 
 	@rm -f scl1$(EXEEXT)
 	$(LINK) $(scl1_OBJECTS) $(scl1_LDADD) $(LIBS)
+scl2$(EXEEXT): $(scl2_OBJECTS) $(scl2_DEPENDENCIES) 
+	@rm -f scl2$(EXEEXT)
+	$(LINK) $(scl2_OBJECTS) $(scl2_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -263,9 +282,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/endpoints1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msg1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pkt1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scl1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scl2.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
