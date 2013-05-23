@@ -41,6 +41,8 @@ int main () {
   mcapi_request_t request;
   mcapi_param_t parms;
   mcapi_info_t version;
+  void *pbuffer = NULL;
+  mcapi_uint_t avail;
 
   /* create a node */
   mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
@@ -50,19 +52,21 @@ int main () {
   ep1 = mcapi_endpoint_create(MASTER_PORT_NUM1,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("ep1 %x   \n", ep1);
-//  ep2 = mcapi_endpoint_create(MASTER_PORT_NUM2,&status);
-//  if (status != MCAPI_SUCCESS) { WRONG }
-//  printf("ep2 %x   \n", ep1);
+  ep2 = mcapi_endpoint_create(MASTER_PORT_NUM2,&status);
+  if (status != MCAPI_SUCCESS) { WRONG }
+  printf("ep2 %x   \n", ep1);
 
   ep3 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM1,MCA_INFINITE, &status);
   if (status != MCAPI_SUCCESS) { WRONG }
- // ep4 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM2,MCA_INFINITE, &status);
-  //if (status != MCAPI_SUCCESS) { WRONG }
+  ep4 = mcapi_endpoint_get(DOMAIN,SLAVE_NODE_NUM, SLAVE_PORT_NUM2,MCA_INFINITE, &status);
+  if (status != MCAPI_SUCCESS) { WRONG }
 
 
 
   /*************************** connect the channels *********************/
   mcapi_pktchan_connect_i(ep1,ep3,&request,&status);
+
+  mcapi_pktchan_connect_i(ep2,ep4,&request,&status);
 
   /*************************** open the channels *********************/
   printf("open pktchan send\n");
@@ -77,6 +81,22 @@ int main () {
   /* close the channels */
   mcapi_pktchan_send_close_i(s1,&request,&status); 
   printf("status %d\n", status);
+
+
+  mcapi_pktchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
+  printf("status %d\n", status);
+
+  while (1) {
+	  avail = mcapi_pktchan_available(r1, &status);
+	  if (avail > 0) {
+		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
+		  printf("RRRRRRRRRRRRr pktchan recv on coreA ok buffer %s, status %d\n",pbuffer,status);
+		  mcapi_pktchan_release(pbuffer, &status);
+		  break;
+	  }
+	  sleep(2);
+  }
+
 
   mcapi_finalize(&status);
   if (rc == 0) {
