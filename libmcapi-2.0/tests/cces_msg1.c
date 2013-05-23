@@ -10,6 +10,7 @@
 #include <stdlib.h> /* for malloc */
 #include <string.h>
 #include <mcapi_impl_spec.h>
+#include <unistd.h>
 
 
 #define NUM_SIZES 4
