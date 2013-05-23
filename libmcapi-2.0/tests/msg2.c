@@ -61,11 +61,16 @@ void do_child()
 	mcapi_info_t version;
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
+	char send_string[] = "HELLO MCAPI";
 
 	mcapi_uint_t avail;
 	int s;
 	int i;
 	int fd;
+	char *send_buf = malloc(64);
+	if (!send_buf)
+		WRONG;
+	
 
 	fd = open("/tmp/child.log", O_CREAT | O_RDWR, 0666);
 	if (fd < 0)
@@ -94,8 +99,9 @@ void do_child()
         /* regular endpoints */
      
         for (s = 0; s < NUM_SIZES; s++) {
-     
-        send (ep2,ep4,"Child Hello MCAPI",status,MCAPI_SUCCESS);
+	memset(send_buf, 0, 64);
+        sprintf(send_buf, "CHILD %s %d", send_string, s);
+        send (ep2,ep4,send_buf,status,MCAPI_SUCCESS);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA: The %d time sending, status %d\n",s, status);
      
@@ -107,6 +113,7 @@ void do_child()
 
 	mcapi_finalize(&status);
 
+	free(send_buf);
 	printf("Child   Test PASSED\n");
 
         _exit(0);
@@ -120,10 +127,25 @@ void do_parent()
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_boolean_t rc = MCAPI_FALSE;
+	char send_string[] = "HELLO MCAPI";
 
 	mcapi_uint_t avail;
 	int s;
 	int i;
+	int fd;
+	char *send_buf0 = malloc(64);
+	if (!send_buf0)
+		WRONG;
+
+
+	fd = open("/tmp/parent.log", O_CREAT | O_RDWR, 0666);
+	if (fd < 0)
+		{ WRONG };
+
+	if (dup2(fd, STDOUT_FILENO) == -1) {
+		WRONG;
+	}
+	close(fd);
 
       	mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
@@ -141,8 +163,9 @@ void do_parent()
         /* regular endpoints */
      
         for (s = 0; s < NUM_SIZES; s++) {
-     
-        send (ep1,ep3,"Parent Hello MCAPI",status,MCAPI_SUCCESS);
+	memset(send_buf0, 0, 64);
+        sprintf(send_buf0, "PARENT %s %d", send_string, s);
+        send (ep1,ep3,send_buf0,status,MCAPI_SUCCESS);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA: The %d time sending, status %d\n",s, status);
      
@@ -172,6 +195,7 @@ void do_parent()
 
 	mcapi_finalize(&status);
 
+	free(send_buf0);
 }
 
 int main (int ac, char **av) {
