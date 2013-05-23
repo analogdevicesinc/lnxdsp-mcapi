@@ -41,15 +41,16 @@ void do_child()
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
+        mcapi_sclchan_recv_hndl_t r1;
 	char send_string[] = "mcapi_pkt_2_process";
+        void *pbuffer = NULL;
 
 	mcapi_uint_t avail;
 	int s;
-	int i;
+	int i,pass_num=0;
 	int fd;
-	char *send_buf = malloc(BUFF_SIZE);
-	if (!send_buf)
-		WRONG;
+	char *send_buf[NUM_SIZES];
+	char *save_buf[NUM_SIZES];
 
 	fd = open("/tmp/child.log", O_CREAT | O_RDWR, 0666);
 	if (fd < 0)
@@ -86,12 +87,17 @@ void do_child()
         printf("status %d\n", status);
 
         for (s = 0; s < NUM_SIZES; s++) {
-       // sprintf(send_buf, "CHILD %s %d", send_string, s);
-  	memset(send_buf, 0, BUFF_SIZE);
-  	mcapi_pktchan_send_i(s1,send_buf,BUFF_SIZE,&request,&status);
+	send_buf[s] = malloc(BUFF_SIZE);
+	if (!send_buf[s])
+		WRONG;
+	save_buf[s] = malloc(BUFF_SIZE);
+	if (!save_buf[s])
+		WRONG;
+  	memset(send_buf[s], 1, BUFF_SIZE);
+  	memcpy(save_buf[s],send_buf[s], BUFF_SIZE);
+  	mcapi_pktchan_send_i(s1,send_buf[s],BUFF_SIZE,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA child: The %d time sending, status %d\n",s, status);
-
         }
 
         printf("close pktchan send\n");
@@ -99,12 +105,49 @@ void do_child()
         mcapi_pktchan_send_close_i(s1,&request,&status); 
         printf("status %d\n", status);
 	
+# if 1 
+
+  mcapi_pktchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
+  printf("status %d\n", status);
+
+  while (1) {
+	  avail = mcapi_pktchan_available(r1, &status);
+	  if (avail > 0) {
+		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
+  		  if (status != MCAPI_SUCCESS) { WRONG }
+		  printf("Child: CoreA pktchan recv buffer %s, The status %i\n",pbuffer, status);
+
+                  for (s = 0; s < NUM_SIZES; s++) {
+			  *save_buf[s]=*save_buf[s] + 1;
+			  rc=memcmp(send_buf[s],save_buf[s],BUFF_SIZE);
+			  if (!rc) { WRONG }
+			  else {
+				printf("Child: the %d time data sent back from coreB are same with that from CoreA! \n",s);
+		  		pass_num++;}
+	         }
+
+		  mcapi_pktchan_release(pbuffer, &status);
+		  break;
+	  }
+	  sleep(2);
+  }
+  mcapi_pktchan_recv_close_i(r1,&request,&status); 
+
+
+#endif
         mcapi_endpoint_delete(ep2,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
 	mcapi_finalize(&status);
 
-	free(send_buf);
-	printf("Child   Test PASSED\n");
+	free(send_buf[NUM_SIZES]);
+	free(save_buf[NUM_SIZES]);
+
+	if (pass_num == NUM_SIZES) {
+    	printf("Child Test PASSED\n");
+  	} else {
+    	printf("Child Test FAILED\n");
+	exit(1);
+  	}
 
         _exit(0);
 }
@@ -117,7 +160,7 @@ void do_parent(int pid)
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s0;
-        mcapi_sclchan_recv_hndl_t r1;
+        mcapi_sclchan_recv_hndl_t r0;
 	mcapi_boolean_t rc = MCAPI_FALSE;
 	char send_string[] = "mcapi_pkt_2_process";
 	int stat_val;
@@ -126,9 +169,8 @@ void do_parent(int pid)
 	int s;
 	int i,pass_num=0;
 	int fd;
-	char *send_buf0 = malloc(BUFF_SIZE);
-	if (!send_buf0)
-		WRONG;
+	char *send_buf[NUM_SIZES];
+	char *save_buf[NUM_SIZES];
 
 	fd = open("/tmp/parent.log", O_CREAT | O_RDWR, 0666);
 	if (fd < 0)
@@ -162,10 +204,15 @@ void do_parent(int pid)
         printf("status %d\n", status);
 
         for (s = 0; s < NUM_SIZES; s++) {
-        //sprintf(send_buf0, "PARENT %s %d", send_string, s);
-        //mcapi_pktchan_send_i(s0,send_buf0,32,&request,&status);
-  	memset(send_buf0, 1, BUFF_SIZE);
-  	mcapi_pktchan_send_i(s0,send_buf0,BUFF_SIZE,&request,&status);
+	send_buf[s] = malloc(BUFF_SIZE);
+	if (!send_buf[s])
+		WRONG;
+	save_buf[s] = malloc(BUFF_SIZE);
+	if (!save_buf[s])
+		WRONG;
+  	memset(send_buf[s], 1, BUFF_SIZE);
+  	memcpy(save_buf[s],send_buf[s], BUFF_SIZE);
+  	mcapi_pktchan_send_i(s0,send_buf[s],BUFF_SIZE,&request,&status);
         if (status != MCAPI_SUCCESS) { WRONG }
         printf("coreA parent: The %d time sending, status %d\n",s, status);
 
@@ -178,26 +225,32 @@ void do_parent(int pid)
 	
 # if 1 
 
-  mcapi_pktchan_recv_open_i(&r1 /*recv_handle*/,ep1, &request, &status);
+  mcapi_pktchan_recv_open_i(&r0 /*recv_handle*/,ep1, &request, &status);
   printf("status %d\n", status);
 
   while (1) {
-	  avail = mcapi_pktchan_available(r1, &status);
+	  avail = mcapi_pktchan_available(r0, &status);
 	  if (avail > 0) {
-		  mcapi_pktchan_recv_i(r1,(void **)&pbuffer,&request,&status);
+		  mcapi_pktchan_recv_i(r0,(void **)&pbuffer,&request,&status);
   		  if (status != MCAPI_SUCCESS) { WRONG }
 		  else {pass_num++;}
-		  printf("CoreA :pktchan recv  buffer %s, The %d time receiving , status %i\n",pbuffer, i, status);
+		  printf("Parent: CoreA pktchan recv buffer %s, The status %i\n",pbuffer, status);
 
-		  rc=memcmp(send_buf0,pbuffer,BUFF_SIZE);
-		  if (!rc) { WRONG }
-		  else {printf("Data sent back from coreB are same with that from CoreA");}
+                  for (s = 0; s < NUM_SIZES; s++) {
+			  *save_buf[s]=*save_buf[s] + 1;
+			  rc=memcmp(send_buf[s],save_buf[s],BUFF_SIZE);
+			  if (!rc) { WRONG }
+			  else {
+			  	printf("Parent: the %d time data sent back from coreB are same with that from CoreA! ",s);
+		  		pass_num++;}
+	         	}
+
 		  mcapi_pktchan_release(pbuffer, &status);
 		  break;
 	  }
 	  sleep(2);
   }
-  mcapi_pktchan_recv_close_i(r1,&request,&status); 
+  mcapi_pktchan_recv_close_i(r0,&request,&status); 
 
 
 #endif
@@ -212,8 +265,10 @@ void do_parent(int pid)
         if (status != MCAPI_SUCCESS) { WRONG }
 	mcapi_finalize(&status);
 
-	free(send_buf0);
-	if (pass_num == 1) {
+	free(send_buf[NUM_SIZES]);
+	free(save_buf[NUM_SIZES]);
+
+	if (pass_num == NUM_SIZES) {
     	printf("Parent Test PASSED\n");
   	} else {
     	printf("Parent Test FAILED\n");
