@@ -36,7 +36,7 @@ mcapi_boolean_t send (mcapi_sclchan_send_hndl_t send_handle, mcapi_endpoint_t re
   default: fprintf (stderr,"ERROR: bad data size in call to send\n");
   };
   if (status == MCAPI_SUCCESS) {
-    fprintf(stderr,"endpoint=%i has sent %i byte(s): [%llu]\n",(int)send_handle,(int)size/8,data);
+    fprintf(stderr,"CoreA endpoint=%i has sent %i byte(s): [%llu]\n",(int)send_handle,(int)size/8,data);
   }
   if (status == exp_status) {
     rc = MCAPI_TRUE;
@@ -62,7 +62,7 @@ mcapi_boolean_t recv (mcapi_sclchan_recv_hndl_t recv_handle,uint32_t size,mcapi_
     rc = MCAPI_TRUE;
   }
   if (status == MCAPI_SUCCESS) {
-	  fprintf(stderr,"endpoint=%i has received %i byte(s): [%llu]\n",(int)recv_handle,(int)size/8,data);
+	  fprintf(stderr,"CoreA endpoint=%i has received %i byte(s): [%llx]\n",(int)recv_handle,(int)size/8,data);
 	  if (data != exp_data) { 
 		  fprintf(stderr, "expected %lld, received %lld\n",exp_data,data); 
 		  rc = MCAPI_FALSE; 
@@ -139,20 +139,20 @@ int main () {
 
 	mcapi_sclchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
 
-
+	s = 0;
 	while (1) {
 		avail = mcapi_sclchan_available(r1, &status);
 		if (avail > 0) {
-			recv(r1,8,status, MCAPI_SUCCESS, test_pattern);
+			recv(r1,sizes[s++],status, MCAPI_SUCCESS, test_pattern);
+			if ( s == NUM_SIZES )
 			break;
 		}
 		sleep(2);
 	}
 	mcapi_sclchan_recv_close_i(r1,&request,&status); 
-
-
+ 
 	mcapi_finalize(&status);
 
-	printf("   Test PASSED\n");
+	printf("CoreA Test PASSED\n");
 	return 0;
 }
