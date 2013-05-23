@@ -26,7 +26,8 @@ void wrong(unsigned line)
   exit(1);
 }
 
-char send_buf[32] = "mcapi_pkt1";
+char send_buf[32] = "";
+char send_string[] = "mcapi_pkt1";
 const int fail = 1;
 const int ok = 0;
 
@@ -72,10 +73,8 @@ int main () {
   printf("open pktchan send\n");
   mcapi_pktchan_send_open_i(&s1 /*send_handle*/,ep1, &request, &status);
   printf("status %d\n", status);
-
   for (s = 0; s < NUM_SIZES; s++) {
-
-  printf("pktchan send i\n");
+  sprintf(send_buf, "%s %d", send_string, s);
   mcapi_pktchan_send_i(s1,send_buf,32,&request,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("coreA: The %d time sending, status %d\n",s, status);
@@ -98,18 +97,15 @@ int main () {
   		  if (status != MCAPI_SUCCESS) { WRONG }
 		  printf("CoreA :pktchan recv on coreA ok buffer %s, The %d time receiving ok, status %i\n",pbuffer, rc, status);
 		  mcapi_pktchan_release(pbuffer, &status);
-		  
-		  if (rc == NUM_SIZES)
 		  break;
-		  rc++;
 	  }
 	  sleep(2);
   }
-
+  mcapi_pktchan_recv_close_i(r1,&request,&status); 
   mcapi_endpoint_delete(ep1,&status);
+  if (status != MCAPI_SUCCESS) { WRONG }
   mcapi_endpoint_delete(ep2,&status);
-  mcapi_endpoint_delete(ep3,&status);
-  mcapi_endpoint_delete(ep4,&status);
+  if (status != MCAPI_SUCCESS) { WRONG }
 
   mcapi_finalize(&status);
   if (rc == NUM_SIZES) {
