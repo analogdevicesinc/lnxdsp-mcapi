@@ -13,10 +13,9 @@
 
 
 #define NUM_SIZES 4
-#define BUFF_SIZE 64
+#define BUFF_SIZE 256
 #define DOMAIN 0
 #define NODE 0
-#define CCES_SLAVE_NODE_NUM 0
 
 #define WRONG wrong(__LINE__);
 void wrong(unsigned line)
@@ -25,20 +24,8 @@ void wrong(unsigned line)
   fflush(stdout);
   _exit(1);
 }
-char send_buf[32] = "";
-char send_string[] = "HELLO_MCAPI";
-
-void send (mcapi_endpoint_t send, mcapi_endpoint_t recv,char* msg,mcapi_status_t status,int exp_status) {
-  int size = strlen(msg);
-  int priority = 1;
-  mcapi_request_t request;
-
-  mcapi_msg_send_i(send,recv,msg,size,priority,&request,&status);
-  if (status != exp_status) { WRONG}
-  if (status == MCAPI_SUCCESS) {
-    printf("endpoint=%i has sent: [%s]\n",(int)send,msg);
-  }
-}
+unsigned int cmd;
+char dsp_data[128];
 
 void recv (mcapi_endpoint_t recv,mcapi_status_t status,int exp_status) {
   size_t recv_size;
@@ -55,9 +42,10 @@ int main () {
   mcapi_status_t status;
   mcapi_param_t parms;
   mcapi_info_t version;
-  mcapi_endpoint_t ep1,ep2;
+  mcapi_endpoint_t ep1,ep2,ep3,ep4;
   int i,s = 0, rc = 0,pass_num=0;
   mcapi_uint_t avail;
+  mcapi_request_t request;
 
   /* create a node */
   mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
@@ -68,29 +56,58 @@ int main () {
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("ep1 %x   \n", ep1);
 
-  ep2 = mcapi_endpoint_get (DOMAIN,CCES_SLAVE_NODE_NUM,0,MCA_INFINITE,&status);
+  ep4 = mcapi_endpoint_create(2,&status);
+  if (status != MCAPI_SUCCESS) { WRONG }
+  printf("ep4 %x   \n", ep4);
+
+
+  ep2 = mcapi_endpoint_get (DOMAIN,SLAVE_NODE_NUM,0,MCA_INFINITE,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("ep2 %x   \n", ep2);
+
+  ep3 = mcapi_endpoint_get (DOMAIN,SLAVE_NODE_NUM,1,MCA_INFINITE,&status);
+  if (status != MCAPI_SUCCESS) { WRONG }
+  printf("ep3 %x   \n", ep3);
+
 
   /* send and recv messages on the endpoints */
   /* regular endpoints */
 
-  for (s = 0; s < NUM_SIZES; s++) {
-  sprintf(send_buf, "%s %d", send_string, s);
-  send (ep1,ep2,send_buf,status,MCAPI_SUCCESS);
-  if (status != MCAPI_SUCCESS) { WRONG }
-  printf("coreA: The %d time sending, status %d\n",s, status);
+  cmd = 1;
 
+  mcapi_msg_send_i(ep1,ep2,&cmd,4,1,&request,&status);
+  if (status != MCAPI_SUCCESS) { WRONG}
+  if (status == MCAPI_SUCCESS) {
+    printf("endpoint=%i has sent: [%x]\n",(int)ep1,cmd);
   }
-  
+
+  for (i = 0; i < 128; i++)
+	  dsp_data[i] = i;
+
+  mcapi_msg_send_i(ep1,ep3,dsp_data,128,1,&request,&status);
+  if (status != MCAPI_SUCCESS) { WRONG}
+  if (status == MCAPI_SUCCESS) {
+    printf("endpoint=%i has sent: [%x]\n",(int)ep1,cmd);
+  }
+
+  cmd = 4;
+
+  mcapi_msg_send_i(ep1,ep2,&cmd,4,1,&request,&status);
+  if (status != MCAPI_SUCCESS) { WRONG}
+  if (status == MCAPI_SUCCESS) {
+    printf("endpoint=%i has sent: [%x]\n",(int)ep1,cmd);
+  }
+
+
+  sleep(1);
+
+ recv(ep4, &status, MCAPI_SUCCESS);
+
   mcapi_endpoint_delete(ep1,&status);
 
   mcapi_finalize(&status);
 
-  if (pass_num == NUM_SIZES )
   printf("CoreA Test PASSED\n");
-  else
-  printf("CoreA Test FAILED\n");
 
   return 0;
 }
