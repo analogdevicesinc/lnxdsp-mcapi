@@ -145,7 +145,7 @@ void do_child()
         _exit(0);
 }
 
-void do_parent()
+void do_parent(int pid)
 {
 	mcapi_status_t status;
 	mcapi_param_t parms;
@@ -153,9 +153,11 @@ void do_parent()
 	mcapi_request_t request;
 	mcapi_endpoint_t ep1,ep2,ep3,ep4;
 	mcapi_sclchan_send_hndl_t s1;
+	mcapi_sclchan_recv_hndl_t r1;
 	mcapi_boolean_t rc = MCAPI_FALSE;
 
 	mcapi_uint_t avail;
+	int stat_val;
 	int s;
 	int i;
 	int sizes[NUM_SIZES] = {8,16,32,64};
@@ -202,8 +204,35 @@ void do_parent()
 
 	mcapi_sclchan_send_close_i(s1,&request,&status);
 
+# if 1 
+	mcapi_sclchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
+
+	while (1) {
+		avail = mcapi_sclchan_available(r1, &status);
+		if (avail > 0) {
+			recv(r1,64,status, MCAPI_SUCCESS, test_pattern);
+			break;
+		}
+		sleep(2);
+	}
+	mcapi_sclchan_recv_close_i(r1,&request,&status); 
+
+#endif
+	printf("Parent  wait child process\n");
+        waitpid(pid, &stat_val, 0);
+	if (WIFEXITED(stat_val))
+		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
+	else if (WIFSIGNALED(stat_val))
+		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
+
+        mcapi_endpoint_delete(ep2,&status);
+        if (status != MCAPI_SUCCESS) { WRONG }
+
 	mcapi_finalize(&status);
+
+	printf("Parent   Test PASSED\n");
 }
+
 
 int main (int ac, char **av) {
 	mcapi_status_t status;
@@ -250,37 +279,10 @@ int main (int ac, char **av) {
 
 	} else {/* parent */
  
-	int stat_val;
 
-	do_parent();	
+	do_parent(childpid);	
 
-	printf("Parent  wait child process\n");
-        waitpid(childpid, &stat_val, 0);
-	if (WIFEXITED(stat_val))
-		 printf("Child exited with code %d\n",WEXITSTATUS(stat_val));
-	else if (WIFSIGNALED(stat_val))
-		printf("Child terminated  abnormally, signal %d\n", WTERMSIG(stat_val));
-
-	printf("Parent   Test PASSED\n");
-
-	}		
-
-# if 0 
-	mcapi_sclchan_recv_open_i(&r1 /*recv_handle*/,ep2, &request, &status);
-
-
-	while (1) {
-		avail = mcapi_sclchan_available(r1, &status);
-		if (avail > 0) {
-			recv(r1,8,status, MCAPI_SUCCESS, test_pattern);
-			break;
-		}
-		sleep(2);
-	}
-	mcapi_sclchan_recv_close_i(r1,&request,&status); 
-
-#endif
-
+        }
 	printf("   Test PASSED\n");
 	return 0;
 }
