@@ -43,6 +43,7 @@ notice, this list of conditions and the following disclaimer.
 #include <transport_sm.h>
 
 #include <icc.h>
+#include <stdio.h>
 
 #define SEMKEYPATH "/dev/null"  /* Path used on ftok for semget key  */
 #define SEMKEYID 1              /* Id used on ftok for semget key    */
@@ -60,7 +61,7 @@ mcapi_database* c_db = NULL;
 /* the debug level */
 int mcapi_debug = 7;
 
-
+mcapi_endpoint_t mcapi_icc_index;
 
 /* semaphore management */
 uint32_t transport_sm_create_semaphore(uint32_t semkey) {
@@ -165,18 +166,83 @@ mcapi_boolean_t transport_sm_free_shared_mem(uint32_t shmid,void *shm_address)
 
 }
 
-mcapi_boolean_t mcapi_trans_set_node_num(mcapi_uint_t n) 
+mcapi_boolean_t mcapi_icc_node_init()
+{
+	mcapi_icc_index = sm_create_session(MCAPI_MANAGE_SESSION, SP_SCALAR);
+	if (mcapi_icc_index < 0) {
+		if (mcapi_icc_index == -EEXIST) {
+			mcapi_icc_index = 0;
+			return MCAPI_TRUE;
+		} else
+			return  MCAPI_FALSE;
+	}
+	return MCAPI_TRUE;
+}
+
+mcapi_boolean_t mcapi_trans_get_remote_endpoint(uint16_t node_index, mcapi_uint_t port_num, uint16_t *port_index)
+{
+	uint32_t scalar0, scalar1;
+	uint32_t size;
+	uint16_t src_ep, src_cpu;
+	int ret;
+	scalar0 = MK_MCAPI_CMD(MCAPI_CMD_GET_ID);
+	scalar1 = port_num;
+	ret = sm_send_scalar(mcapi_icc_index, MCAPI_MANAGE_SESSION, node_index, scalar0, scalar1, 8);
+	if (ret)
+		return MCAPI_FALSE;
+	scalar0 = 0;
+	scalar1 = 0;
+
+	ret = sm_recv_scalar(mcapi_icc_index, &src_ep, &src_cpu, &scalar0, &scalar1, &size);
+	if (ret)
+		return MCAPI_FALSE;
+
+	printf("recv scalar0 %x, scalar1 %x\n", scalar0, scalar1);
+	if (MCAPI_HEAD(scalar0) == MCAPI_ACK_HEAD) {
+		*port_index = scalar1;
+		return MCAPI_TRUE;
+	} else
+		return MCAPI_FALSE;
+}
+
+mcapi_boolean_t mcapi_trans_set_node_num(mcapi_uint_t n)
 {
 	return MCAPI_TRUE;
 }
 
-mcapi_boolean_t mcapi_trans_get_node_num(mcapi_uint_t* node) 
+mcapi_boolean_t mcapi_trans_get_node_num(mcapi_uint_t* node)
 {
 	*node = c_db->nodes[c_db->num_nodes - 1].node_num;
 	return MCAPI_TRUE;
 }
 
-mcapi_boolean_t mcapi_trans_get_node_index(mcapi_uint_t node_num) 
+mcapi_boolean_t mcapi_trans_get_port_num(mcapi_uint_t port_index, mcapi_uint_t *port_num)
+{
+	int rc = MCAPI_FALSE;
+	int i;
+	for (i = 0; i < c_db->num_nodes ; i++) {
+		if (c_db->nodes[i].node_d.endpoints[port_index].valid) {
+			*port_num = c_db->nodes[i].node_d.endpoints[port_index].port_num;
+			rc = MCAPI_TRUE;
+		}
+	}
+	return rc;
+}
+
+mcapi_boolean_t mcapi_trans_get_remote_port_num(mcapi_uint_t port_index, mcapi_uint_t *port_num)
+{
+	int rc = MCAPI_FALSE;
+	int i;
+	for (i = c_db->num_nodes; i < c_db->num_nodes*2 ; i++) {
+		if (c_db->nodes[i].node_d.endpoints[port_index].valid) {
+			*port_num = c_db->nodes[i].node_d.endpoints[port_index].port_num;
+			rc = MCAPI_TRUE;
+		}
+	}
+	return rc;
+}
+
+mcapi_uint16_t mcapi_trans_get_node_index(mcapi_uint_t node_num)
 {
   /* look up the node */
   int i;
@@ -242,6 +308,7 @@ uint32_t mcapi_trans_encode_handle_internal (uint16_t node_index,uint16_t endpoi
 	uint32_t handle = 0;
 	uint8_t shift = 16;
 
+	printf(" node_index=%d, port_index=%d\n", node_index, endpoint_index);
 	assert ((node_index <= MAX_NODES) && (endpoint_index < MAX_ENDPOINTS));
 
 	handle = node_index;
@@ -493,6 +560,8 @@ mcapi_boolean_t valid_size_param (size_t* size)
 /****************** initialization *************************/
 mcapi_boolean_t mcapi_trans_initialize_() 
 {
+	int i;
+	char *p;
 	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
 	int semkey = ftok(SEMKEYPATH,SEMKEYID);
 	int shmkey = 0;
@@ -521,6 +590,14 @@ mcapi_boolean_t mcapi_trans_initialize_()
 		}
 
 		c_db = shm_addr; 
+		memset(c_db, 0, sizeof(mcapi_database));
+		mcapi_dprintf(1, "%s %d db size %x\n", __func__, __LINE__, sizeof(mcapi_database));
+		p = c_db;
+		for (i = 0; i < sizeof(mcapi_database); i++) {
+			assert(p[i] == 0);
+		}
+
+		mcapi_icc_node_init();
 	}
 	transport_sm_unlock_semaphore(sem_id);
 	mcapi_dprintf(1, "%s %d\n", __func__, __LINE__);
@@ -558,26 +635,111 @@ mcapi_boolean_t mcapi_trans_create_endpoint(mcapi_endpoint_t *endpoint,  mcapi_u
 {
 	int node_num;
 	int node_index;
-	int index = sm_create_session(port_num, SP_PACKET);
-	assert(index >= 0);
-	if (index < 0) {
+	int i;
+	int endpoint_index = sm_create_session(port_num, SP_PACKET);
+	assert(endpoint_index >= 0);
+	if (endpoint_index < 0) {
 		return MCAPI_FALSE;
 	}
 	assert (mcapi_trans_get_node_num(&node_num));
 	node_index = mcapi_trans_get_node_index(node_num);
-	*endpoint = mcapi_trans_encode_handle_internal(node_index,index);
+
+	mcapi_dprintf(1," node index %d ep index %d\n", node_index, endpoint_index);
+
+	assert(c_db->nodes[node_index].node_d.endpoints[endpoint_index].valid == MCAPI_FALSE);
+
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].valid = MCAPI_TRUE;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].port_num = port_num;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].open = MCAPI_FALSE;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].anonymous = anonymous;
+
+	c_db->nodes[node_index].node_d.num_endpoints++; 
+
+
+	*endpoint = mcapi_trans_encode_handle_internal(node_index, endpoint_index);
 	return MCAPI_TRUE;
+}
+
+mcapi_boolean_t mcapi_trans_get_endpoint_internal (mcapi_endpoint_t *e, mcapi_uint_t node_num, 
+		mcapi_uint_t port_num) 
+{
+	int i,j;
+	uint16_t port_index;
+	int ret;
+	int rc = MCAPI_FALSE;
+
+	/* the database should already be locked */
+
+	mcapi_dprintf(2," mcapi_trans_get_endpoint_internal node_num=%d, port_num=%d\n",
+			node_num,port_num);
+
+	/* core 0 */
+	for (i = 0; i < c_db->num_nodes; i++) {
+		if (c_db->nodes[i].node_num == node_num) { 
+			for (j = 0; j < c_db->nodes[i].node_d.num_endpoints; j++) {
+				if ((c_db->nodes[i].node_d.endpoints[j].valid) && 
+						(c_db->nodes[i].node_d.endpoints[j].port_num == port_num)) {
+					/* return the handle */
+					*e = mcapi_trans_encode_handle_internal (i,j);
+					rc = MCAPI_TRUE;
+				}
+			}
+		}
+	}
+	if (rc)
+		return rc;
+
+	/* core 1 */
+	for (i = c_db->num_nodes; i < c_db->num_nodes * 2; i++) {
+		if (c_db->nodes[i].node_num == node_num) { 
+			for (j = 0; j < c_db->nodes[i].node_d.num_endpoints; j++) {
+				if ((c_db->nodes[i].node_d.endpoints[j].valid) && 
+						(c_db->nodes[i].node_d.endpoints[j].port_num == port_num)) {
+					/* return the handle */
+					*e = mcapi_trans_encode_handle_internal (i,j);
+					rc = MCAPI_TRUE;
+				}
+			}
+		}
+	}
+	if (rc)
+		return rc;
+
+	rc = mcapi_trans_get_remote_endpoint(1, port_num, &port_index);
+	if (rc) {
+
+		i = c_db->num_nodes;
+		c_db->nodes[i].node_num = node_num;
+		c_db->nodes[i].node_d.endpoints[port_index].valid = MCAPI_TRUE;
+		c_db->nodes[i].node_d.endpoints[port_index].port_num = port_num;
+
+		*e = mcapi_trans_encode_handle_internal (i,port_index);
+
+		mcapi_dprintf(1,"xxx port_index=%d, port_num=%d\n", port_index, port_num);
+		rc = MCAPI_TRUE;
+	}
+	return rc;
 }
 
 /* non-blocking get endpoint for the given <node_num,port_num> and set endpoint parameter to it's handle */
 void mcapi_trans_get_endpoint_i(  mcapi_endpoint_t* endpoint, mcapi_uint_t node_num, mcapi_uint_t port_num,mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	if (mcapi_trans_get_endpoint_internal(endpoint, node_num, port_num))
+		*mcapi_status = MCAPI_SUCCESS;
+	else
+		*mcapi_status = MCAPI_EPARAM;
 }
 
 /* blocking get endpoint for the given <node_num,port_num> and return it's handle */
 mcapi_boolean_t mcapi_trans_get_endpoint(mcapi_endpoint_t *endpoint,mcapi_uint_t node_num, mcapi_uint_t port_num)
 {
-  return MCAPI_FALSE;
+	mcapi_status_t* mcapi_status;
+	mcapi_request_t request;
+	mcapi_trans_get_endpoint_i(endpoint, node_num, port_num, &request, &mcapi_status);
+	if (mcapi_status == MCAPI_SUCCESS)
+		return MCAPI_TRUE;
+	else
+		return MCAPI_FALSE;
 }
 
 mcapi_boolean_t mcapi_trans_endpoint_exists(mcapi_uint_t port_num)
@@ -588,9 +750,17 @@ mcapi_boolean_t mcapi_trans_endpoint_exists(mcapi_uint_t port_num)
 /* delete the given endpoint */
 void mcapi_trans_delete_endpoint( mcapi_endpoint_t endpoint)
 {
-	uint16_t sn,se;
-	assert(mcapi_trans_decode_handle_internal(endpoint,&sn,&se));
-	sm_destroy_session(se);
+	uint16_t node_index,endpoint_index;
+	assert(mcapi_trans_decode_handle_internal(endpoint,&node_index,&endpoint_index));
+
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].valid = MCAPI_FALSE;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].port_num = 0;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].open = MCAPI_FALSE;
+	c_db->nodes[node_index].node_d.endpoints[endpoint_index].anonymous = 0;
+
+	c_db->nodes[node_index].node_d.num_endpoints--; 
+
+	sm_destroy_session(endpoint_index);
 }
 
 
@@ -617,6 +787,7 @@ void mcapi_trans_msg_send_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  
 	uint16_t rn,re;
 	int ret;
 	int index;
+	uint16_t re_num;
 	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
 
 	assert(mcapi_trans_decode_handle_internal(send_endpoint,&sn,&se));
@@ -624,14 +795,14 @@ void mcapi_trans_msg_send_i( mcapi_endpoint_t  send_endpoint, mcapi_endpoint_t  
 
 	index = se;
 
-	mcapi_dprintf(1,"index %d, re %d, rn %d\n", index, re, rn);
-	ret = sm_send_packet(index, re, rn, buffer, buffer_size);
+	mcapi_trans_get_remote_port_num(re, &re_num);
+	mcapi_dprintf(1,"index %d, re %d, rn %d re_num %d\n", index, re, rn, re_num);
+	ret = sm_send_packet(index, re_num, rn, buffer, buffer_size);
 	if (ret) {
 		mcapi_dprintf(1,"send failed\n");
 		*mcapi_status = ret;
-	}
-
-	*mcapi_status = MCAPI_SUCCESS;
+	} else
+		*mcapi_status = MCAPI_SUCCESS;
 }
 
 
@@ -682,7 +853,8 @@ mcapi_uint_t mcapi_trans_msg_available( mcapi_endpoint_t receive_endpoint)
 	int ret;
 	mcapi_uint_t avail = 0;
 	assert(mcapi_trans_decode_handle_internal(receive_endpoint,&rn,&re));
-	ret = sm_get_session_status(index, &avail, NULL, NULL);
+	assert(rn == 0);
+	ret = sm_get_session_status(re, &avail, NULL, NULL);
 	if (ret)
 		return ret;
 	mcapi_dprintf(1, "%s avail = %d\n", __func__, avail);
@@ -705,7 +877,11 @@ void mcapi_trans_connect_pktchan_i( mcapi_endpoint_t  send_endpoint, mcapi_endpo
 	ret = sm_connect_session(se, re, rn);
 	if (ret)
 		*mcapi_status = MCAPI_FALSE;
-	*mcapi_status = MCAPI_FALSE;
+	*mcapi_status = MCAPI_TRUE;
+	/* update the send endpoint */
+	c_db->nodes[sn].node_d.endpoints[se].connected = MCAPI_TRUE;
+	c_db->nodes[sn].node_d.endpoints[se].recv_endpt = receive_endpoint;
+	c_db->nodes[sn].node_d.endpoints[se].type = MCAPI_PKT_CHAN;
 }
 
 
@@ -734,6 +910,24 @@ void mcapi_trans_open_pktchan_send_i( mcapi_pktchan_send_hndl_t* send_handle, mc
 
 void  mcapi_trans_pktchan_send_i( mcapi_pktchan_send_hndl_t send_handle, void* buffer, size_t size, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
+	uint16_t sn,se;
+	uint16_t rn,re;
+	int ret;
+	int index;
+	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
+
+	assert(mcapi_trans_decode_handle_internal(send_handle,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(c_db->nodes[sn].node_d.endpoints[se].recv_endpt,&rn,&re));
+
+	index = se;
+
+	mcapi_dprintf(1,"index %d, re %d, rn %d\n", index, re, rn);
+	ret = sm_send_packet(index, re, rn, buffer, size);
+	if (ret) {
+		mcapi_dprintf(1,"send failed\n");
+		*mcapi_status = ret;
+	} else
+		*mcapi_status = MCAPI_SUCCESS;
 }
 
 
@@ -746,8 +940,47 @@ mcapi_boolean_t  mcapi_trans_pktchan_send( mcapi_pktchan_send_hndl_t send_handle
 
 void mcapi_trans_pktchan_recv_i( mcapi_pktchan_recv_hndl_t receive_handle,  void** buffer, mcapi_request_t* request,mcapi_status_t* mcapi_status)
 {
-}
+	uint16_t sn,se;
+	uint16_t rn,re;
+	int ret;
+	int index;
+	uint32_t len;
+	int i;
+	buffer_entry* db_buff = NULL;
 
+	mcapi_boolean_t completed =  (*mcapi_status == MCAPI_SUCCESS) ? MCAPI_FALSE : MCAPI_TRUE;
+
+	assert(mcapi_trans_decode_handle_internal(receive_handle,&rn,&re));
+
+	/* find a free mcapi buffer (we only have to worry about this on the sending side) */
+	for (i = 0; i < MAX_BUFFERS; i++) {
+		if (!c_db->buffers[i].in_use) {
+			c_db->buffers[i].in_use = MCAPI_TRUE;
+			c_db->buffers[i].magic_num = MAGIC_NUM;
+			db_buff = &c_db->buffers[i];
+			break;
+		}
+	}
+	if (i == MAX_BUFFERS) {
+		/* we couldn't get a free buffer */
+		mcapi_dprintf(2," ERROR mcapi_trans_send_internal: No more buffers available - try freeing some buffers. \n");
+		return MCAPI_FALSE;
+	}
+
+	index = re;
+
+	ret = sm_recv_packet(index,&sn, &se, db_buff->buff, &len);
+	if (ret) {
+		mcapi_dprintf(1,"recv failed\n");
+		*mcapi_status = ret;
+	}
+	mcapi_dprintf(1,"index %d, se %d, sn %d\n", index, se, sn);
+	mcapi_dprintf(1,"buffer %s\n", buffer);
+
+	*buffer = db_buff->buff;
+	*mcapi_status = MCAPI_SUCCESS;
+
+}
 
 
 mcapi_boolean_t mcapi_trans_pktchan_recv( mcapi_pktchan_recv_hndl_t receive_handle, void** buffer, size_t* received_size)
@@ -768,7 +1001,19 @@ mcapi_uint_t mcapi_trans_pktchan_available( mcapi_pktchan_recv_hndl_t   receive_
 
 mcapi_boolean_t mcapi_trans_pktchan_free( void* buffer)
 {
-  return MCAPI_FALSE;
+	int rc = MCAPI_TRUE;
+	buffer_entry* b_e;
+
+	/* optimization - just do pointer arithmetic on the buffer pointer to get
+	   the base address of the buffer_entry structure. */
+	b_e = buffer-9;
+	if (b_e->magic_num == MAGIC_NUM) {
+		memset(b_e,0,sizeof(buffer_entry));
+	} else {
+		/* didn't find the buffer */
+		rc = MCAPI_FALSE;
+	}
+	return rc;
 }
 
 
@@ -804,20 +1049,6 @@ void mcapi_trans_open_sclchan_send_i( mcapi_sclchan_send_hndl_t* send_handle, mc
 
 
 
-mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,  uint64_t dataword, uint32_t size)
-{
-  return MCAPI_FALSE;
-}
-
-
-
-mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_handle,uint64_t *data,uint32_t size)
-{
-  return MCAPI_FALSE;
-}
-
-
-
 mcapi_uint_t mcapi_trans_sclchan_available_i( mcapi_sclchan_recv_hndl_t receive_handle)
 {
 	mcapi_uint_t avail;
@@ -837,6 +1068,78 @@ void mcapi_trans_sclchan_send_close_i( mcapi_sclchan_send_hndl_t send_handle,mca
 {
 }
 
+mcapi_boolean_t mcapi_trans_sclchan_send( mcapi_sclchan_send_hndl_t send_handle,
+		uint64_t dataword, uint32_t size)
+{  
+	uint16_t sn,se,rn,re;
+	uint32_t scalar0 = 0, scalar1 = 0;
+	uint32_t type;
+	int ret;
+	int index;
+	int rc = MCAPI_FALSE;
+
+	mcapi_dprintf(2,"  mcapi_trans_sclchan_send send_handle=%x\n",send_handle);
+
+	assert(mcapi_trans_decode_handle_internal(send_handle,&sn,&se));
+	assert(mcapi_trans_decode_handle_internal(c_db->nodes[sn].node_d.endpoints[se].recv_endpt,&rn,&re));
+
+	switch (size) {
+	case 1:
+		scalar0 = (uint32_t)(dataword & 0xff);
+		break;
+	case 2:
+		scalar0 = (uint32_t)(dataword & 0xffff);
+		break;
+	case 4:
+		scalar0 = (uint32_t)(dataword & 0xffffffff);
+		break;
+	case 8:
+		scalar1 = (uint32_t)(dataword & 0xffffffff);
+		scalar0 = (uint32_t)((dataword >> 32) & 0xffffffff);
+		break;
+	}
+
+	index = se;
+	ret = sm_send_scalar(index, re, rn, scalar0, scalar1, type);
+	if (ret) 
+		mcapi_dprintf(1,"send failed\n");
+	return MCAPI_TRUE;
+}
+
+mcapi_boolean_t mcapi_trans_sclchan_recv( mcapi_sclchan_recv_hndl_t receive_handle,
+		uint64_t *data,uint32_t size)
+{
+	uint16_t rn,re;
+	size_t received_size;
+	uint32_t scalar0 = 0, scalar1 = 0;
+	uint32_t type;
+	int ret;
+	int index;
+	int rc = MCAPI_FALSE;
+
+	assert(mcapi_trans_decode_handle_internal(receive_handle,&rn,&re));
+
+
+	index = re;
+	ret = sm_recv_scalar(index, re, rn, &scalar0, &scalar1, &type);
+	if (ret) {
+		mcapi_dprintf(1,"send failed\n");
+	} 
+	received_size = type;
+	switch (received_size) {
+	case 1:
+	case 2:
+	case 4:
+		*data = scalar0;
+	case 8:
+		*data = ((uint64_t )scalar0 << 32) | scalar1;
+	}
+
+	if (size != received_size) {}
+		return MCAPI_FALSE;
+
+	return MCAPI_TRUE;
+}
 
 
 /****************** test,wait & cancel ****************************/
@@ -886,9 +1189,26 @@ mcapi_boolean_t mcapi_trans_test_i( mcapi_request_t* request, size_t* size,mcapi
 
 
 
-mcapi_boolean_t mcapi_trans_wait( mcapi_request_t* request, size_t* size,mcapi_status_t* mcapi_status)
+mcapi_boolean_t mcapi_trans_wait( mcapi_request_t* request, size_t* size,
+			mcapi_status_t* mcapi_status,  mcapi_timeout_t timeout)
 {
-  return MCAPI_FALSE;
+	mcapi_timeout_t time = 0;
+	mcapi_boolean_t rc;
+	while(1) {
+		time++;
+		rc = mcapi_trans_test_i(request,size,mcapi_status);
+		if (request->completed) {
+			return rc;
+		}
+		/* yield */
+		mcapi_dprintf(5," mcapi_trans_wait - attempting to yield\n");
+		/* we don't have the lock, it's safe to just yield */
+		sched_yield();
+		if ((timeout !=  MCAPI_INFINITE) && (time >= timeout)) {
+			*mcapi_status = MCAPI_EREQ_TIMEOUT;
+			return MCAPI_FALSE;
+		}
+	}
 }
 
 mcapi_boolean_t mcapi_trans_wait_any( mcapi_request_t* request, size_t* size,mcapi_status_t* mcapi_status)

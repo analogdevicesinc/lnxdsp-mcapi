@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define NODE_NUM 1
-#define PORT_NUM1 100
+#define PORT_NUM1 101
 #define PORT_NUM2 200
 
 #define BUFF_SIZE 64
@@ -65,19 +65,23 @@ int main () {
   ep1 = mcapi_create_endpoint (PORT_NUM1,&status);
   if (status != MCAPI_SUCCESS) { WRONG }
   printf("ep1 %x   \n", ep1);
+ ep2 = mcapi_get_endpoint(100, 5, &status);
+  if (status != MCAPI_SUCCESS) { WRONG }
 
- ep2 = mcapi_trans_encode_handle_internal(1,5);
-
+#if 1
   /* send and recv messages on the endpoints */
   /* regular endpoints */
   send (ep1,ep2,"1Hello MCAPI",status,MCAPI_SUCCESS);
   
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
-	if (avail > 0)
-  		recv (ep1,status,MCAPI_SUCCESS);
-	sleep(1);
+	if (avail > 0) {
+		recv (ep1,status,MCAPI_SUCCESS);
+		break;
+	}
+	sleep(2);
   }
+#endif
   mcapi_finalize(&status);
   printf("   Test PASSED\n");
   return 0;

@@ -38,10 +38,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdarg.h> /* for va_list */
 #include <stdio.h> /* for the inlined dprintf routine */
 
+#define MCAPI_MANAGE_SESSION 100
+
+#define MCAPI_HEAD(x) ((x) >> 16 & 0xffff)
+#define MCAPI_CMD(x) ((x)& 0xffff)
+#define MCAPI_CMD_HEAD 0xFE
+#define MCAPI_CMD_GET_ID        0x1
+#define MCAPI_CMD_GET_TYPE      0x2
+#define MCAPI_ACK_HEAD   0xFF
+
+#define MK_MCAPI_CMD(x) (((x)& 0xffff) | (MCAPI_CMD_HEAD << 16))
+#define MK_MCAPI_CMD_ACK(x) (((x)& 0xffff) | (MCAPI_ACK_HEAD << 16))
 
 #define MAX_NODES 1
 #define MAX_ENDPOINTS 32
 #define MAX_BUFFERS 32
+#define MCAPI_MAX_REQUESTS 32
 /*******************************************************************
   definitions and constants
 *******************************************************************/    
@@ -80,6 +92,7 @@ typedef struct {
   mcapi_boolean_t open;
   mcapi_boolean_t connected;
   mcapi_endpoint_t recv_endpt;
+  uint32_t type;
 } endpoint_entry;
 
 typedef struct {
@@ -98,8 +111,9 @@ typedef struct {
 
 typedef struct {
   uint16_t num_nodes;
-  node_entry nodes[MAX_NODES];
-  buffer_entry buffers [MAX_BUFFERS];
+  node_entry nodes[MAX_NODES + MAX_NODES];
+  mcapi_request_t requests[MCAPI_MAX_REQUESTS];
+  buffer_entry buffers[MAX_BUFFERS];
 } mcapi_database;
 
 

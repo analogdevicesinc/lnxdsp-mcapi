@@ -124,6 +124,61 @@ int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu, vo
 	return 0;
 }
 
+int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
+		uint16_t dst_cpu, uint32_t scalar0, uint32_t scalar1, uint32_t size)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	pkt.remote_ep = dst_ep;
+	pkt.dst_cpu = dst_cpu;
+
+	pkt.buf_len = scalar1;
+	pkt.buf = scalar0;
+	switch (size) {
+	case 1:
+		pkt.type = SM_SCALAR_READY_8;
+		break;
+	case 2:
+		pkt.type = SM_SCALAR_READY_16;
+		break;
+	case 4:
+		pkt.type = SM_SCALAR_READY_32;
+		break;
+	case 8:
+		pkt.type = SM_SCALAR_READY_64;
+		break;
+	}
+
+	ret = ioctl(fd, CMD_SM_SEND, &pkt);
+	return ret;
+}
+
+int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, uint32_t *scalar0,
+		uint32_t *scalar1, uint32_t *size)
+{
+	int ret;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	pkt.type = SM_SESSION_SCALAR_READY_64;
+
+	ret = ioctl(fd, CMD_SM_RECV, &pkt);
+	if (ret)
+		return ret;
+	if (src_ep)
+		*src_ep = pkt.local_ep;
+	if (src_cpu)
+		*src_cpu = pkt.src_cpu;
+	if (scalar0)
+		*scalar0 = pkt.buf;
+	if (scalar1)
+		*scalar1 = pkt.buf_len;
+	if (size)
+		*size = pkt.type;
+
+	return ret;
+}
+
 int sm_get_session_status(uint32_t session_idx, uint32_t *avail, uint32_t *uncomplete, uint32_t *status)
 {
 	int ret;

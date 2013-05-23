@@ -15,6 +15,9 @@ endpoints1: endpoints1.o $(LIB)
 
 msg1: msg1.o $(LIB)
 	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
+
+pkt1: pkt1.o $(LIB)
+	$(CC) $(LDFLAGS) $< $(LIB) -o $@ > $@.map
 clean:
 	rm -rf *.o *.map *.gdb 
 
