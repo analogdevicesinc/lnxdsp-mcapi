@@ -43,7 +43,7 @@ static char *jpg_path = "/test.jpg";
 	
 static void jpg_output(void)
 {
-  if ((jpg_fd = open(jpg_path, O_RDWR, 0)) < 0)
+  if ((jpg_fd = open(jpg_path, O_RDWR | O_CREAT, S_IRWXU)) < 0)
 		printf("opening data file '%s' failed", jpg_path);
 
   printf("img->jpg_buffer = 0x%x\n", img_info.jpg_buffer);
