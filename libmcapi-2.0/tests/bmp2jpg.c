@@ -38,8 +38,8 @@ static int bmp_fd;
 static int jpg_fd;
 static void *bmp_buffer, *jpg_buffer;
 static unsigned long bmp_len, jpg_len;
-static char *bmp_path = "/bin/test.bmp";
-static char *jpg_path = "/test.jpg";
+static char *bmp_path = "test.bmp";
+static char *jpg_path = "test.jpg";
 	
 static void jpg_output(void)
 {
