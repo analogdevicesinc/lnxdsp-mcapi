@@ -95,12 +95,12 @@ void send (mcapi_endpoint_t send, mcapi_endpoint_t recv, void* msg,int size, mca
   }
 }
 
-void recv (mcapi_endpoint_t recv,mcapi_status_t status,int exp_status) {
+void recv (mcapi_endpoint_t recv,mcapi_status_t *status,int exp_status) {
   size_t recv_size;
   mcapi_request_t request;
-  mcapi_msg_recv_i(recv,(void *)(&img_info),sizeof(struct image_info),&request,&status);
-  if (status != exp_status) { WRONG}
-  if (status == MCAPI_SUCCESS) {
+  mcapi_msg_recv_i(recv,(void *)(&img_info),sizeof(struct image_info),&request,status);
+  if (*status != exp_status) { WRONG}
+  if (*status == MCAPI_SUCCESS) {
     printf("endpoint=%i has received: [%x]\n",(int)recv,img_info.jpg_len);
   }
 }
@@ -156,7 +156,7 @@ int main () {
   while (1) {
 	avail = mcapi_msg_available(ep1, &status);
 	if (avail > 0) {
-		recv (ep1,status,MCAPI_SUCCESS);
+		recv (ep1,&status,MCAPI_SUCCESS);
   		if (status != MCAPI_SUCCESS) { WRONG }
 		else{
 			jpg_output();
