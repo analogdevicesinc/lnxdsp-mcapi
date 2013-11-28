@@ -114,6 +114,8 @@ int main () {
   mcapi_uint_t avail;
   unsigned int *buffer;
 
+  system("ffmpeg -f video4linux2 -r 5 -s 320x240 -i /dev/video0 test.bmp");
+
   if ((bmp_fd = open(bmp_path, O_RDONLY, 0)) < 0)
 		printf("opening data file '%s' failed", bmp_path);
 
