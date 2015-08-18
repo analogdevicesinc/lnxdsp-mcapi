@@ -1,7 +1,8 @@
 INCLUDES                = -I$(top_srcdir)/include
 
 
-bin_PROGRAMS            = endpoints1 msg1 msg2 pkt1 pkt2 pkt3 scl1 scl2 cces_msg1 bmp2jpg arm_sharc_msg1
+bin_PROGRAMS            = endpoints1 msg1 msg2 pkt1 pkt2 pkt3 scl1 scl2 cces_msg1 bmp2jpg arm_sharc_msg1 arm_sharc_scl1
+				arm_sharc_pkt1
 
 endpoints1_SOURCES         = endpoints1.c
 endpoints1_LDADD           = $(top_builddir)/libmcapi.la
@@ -35,3 +36,9 @@ cces_msg1_LDADD      = $(top_builddir)/libmcapi.la
 
 arm_sharc_msg1_SOURCES    = arm_sharc_msg1.c
 arm_sharc_msg1_LDADD      = $(top_builddir)/libmcapi.la
+
+arm_sharc_scl1_SOURCES    = arm_sharc_scl1.c
+arm_sharc_scl1_LDADD      = $(top_builddir)/libmcapi.la
+
+arm_sharc_pkt1_SOURCES    = arm_sharc_pkt1.c
+arm_sharc_pkt1_LDADD      = $(top_builddir)/libmcapi.la
