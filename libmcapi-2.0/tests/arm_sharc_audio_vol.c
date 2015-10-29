@@ -22,6 +22,7 @@ on a single node
 
 struct mcapi_audio_cmd {
 	uint8_t cmd_head;
+	int8_t ret;
 	uint8_t nargs;
 	uint8_t arg0;
 	uint8_t arg1;
@@ -36,9 +37,10 @@ void wrong(unsigned line)
 {
 	fprintf(stderr,"WRONG: line=%u\n", line);
 	fflush(stdout);
-	_exit(1);
+	exit(1);
 }
-char cmd_buf[8] = "";
+static uint8_t cmd_buf[BUFF_SIZE];
+static uint8_t ret_buf[BUFF_SIZE];
 
 __attribute__ ((noreturn))
 static void show_usage(int exit_status)
@@ -61,28 +63,6 @@ static struct option const long_opts[] = {
         {NULL,          no_argument, NULL, 0x0}
 };
 
-void send (mcapi_endpoint_t send, mcapi_endpoint_t recv,char* msg,mcapi_status_t status,int exp_status) {
-	int size = strlen(msg);
-	int priority = 1;
-	mcapi_request_t request;
-
-	mcapi_msg_send_i(send,recv,msg,size,priority,&request,&status);
-	if (status != exp_status) { WRONG}
-	if (status == MCAPI_SUCCESS) {
-		printf("endpoint=%i has sent: [%s]\n",(int)send,msg);
-	}
-}
-
-void recv (mcapi_endpoint_t recv,mcapi_status_t status,int exp_status) {
-	size_t recv_size;
-	char buffer[BUFF_SIZE];
-	mcapi_request_t request;
-	mcapi_msg_recv_i(recv,buffer,BUFF_SIZE,&request,&status);
-	if (status != exp_status) { WRONG}
-	if (status == MCAPI_SUCCESS) {
-		printf("endpoint=%i has received: [%s]\n",(int)recv,buffer);
-	}
-}
 
 int main (int argc, char **argv) {
 	mcapi_status_t status;
@@ -94,6 +74,7 @@ int main (int argc, char **argv) {
 	int c;
 	int vol;
 	struct mcapi_audio_cmd *cmd;
+	mcapi_request_t request;
 
 	/* create a node */
 	mcapi_initialize(DOMAIN,NODE,NULL,&parms,&version,&status);
@@ -132,9 +113,26 @@ int main (int argc, char **argv) {
 	}
 
 
-	send (ep1,ep2,cmd_buf,status,MCAPI_SUCCESS);
+	mcapi_msg_send_i(ep1, ep2, cmd_buf, sizeof(struct mcapi_audio_cmd), 1, &request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
-	printf("coreA: sending audio cmd%x %x %x %x\n", cmd->cmd_head, cmd->nargs, cmd->arg0, cmd->arg1);
+	printf("core 0: Sending audio cmd%x %x %x %x\n", cmd->cmd_head, cmd->nargs, cmd->arg0, cmd->arg1);
+
+	cmd = (struct mcapi_audio_cmd*)ret_buf;
+
+	while (1) {
+		avail = mcapi_msg_available(ep1, &status);
+		if (avail > 0) {
+			mcapi_msg_recv_i(ep1, ret_buf, BUFF_SIZE, &request, &status);
+  			if (status != MCAPI_SUCCESS) { WRONG }
+			if (cmd->ret == 1)
+       			        printf("Core 0 : Audio cmd is executed by core 1. ret=%d\n", cmd->ret);
+			else
+       	        		printf("Core 0 : Audio cmd failed by core 1. ret=%d\n", cmd->ret);
+	               	break;
+		}
+		sleep(2);
+	}
+
 
 	mcapi_endpoint_delete(ep1,&status);
 
