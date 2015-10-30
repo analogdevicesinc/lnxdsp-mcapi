@@ -130,7 +130,7 @@ int main (int argc, char **argv) {
        	        		printf("Core 0 : Audio cmd failed by core 1. ret=%d\n", cmd->ret);
 	               	break;
 		}
-		sleep(2);
+		sleep(1);
 	}
 
 
