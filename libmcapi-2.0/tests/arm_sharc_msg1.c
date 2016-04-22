@@ -12,7 +12,7 @@
 #include <mcapi_impl_spec.h>
 
 
-#define NUM_SIZES 1
+#define NUM_SIZES 100
 #define BUFF_SIZE 64
 #define DOMAIN 0
 #define NODE 0
@@ -73,29 +73,23 @@ int main () {
 
   /* send and recv messages on the endpoints */
   /* regular endpoints */
-
   for (s = 0; s < NUM_SIZES; s++) {
-  sprintf(send_buf, "%s %d", send_string, s);
-  send (ep1,ep2,send_buf,status,MCAPI_SUCCESS);
-  if (status != MCAPI_SUCCESS) { WRONG }
-  printf("coreA: The %d time sending, status %d\n",s, status);
+	  sprintf(send_buf, "%s %d", send_string, s);
+	  send (ep1,ep2,send_buf,status,MCAPI_SUCCESS);
+	  if (status != MCAPI_SUCCESS) { WRONG }
+	  printf("coreA: The %d time sending, status %d\n",s, status);
 
-  }
-  
-  i = 0;
-  while (1) {
-	avail = mcapi_msg_available(ep1, &status);
-	if (avail > 0) {
-		recv (ep1,status,MCAPI_SUCCESS);
-  		if (status != MCAPI_SUCCESS) { WRONG }
-		else {pass_num++;}
+	  while (1) {
+		avail = mcapi_msg_available(ep1, &status);
+		if (avail > 0)
+			break;
+	  }
 
-                printf("CoreA : message recv. The %d time receiving , status %d\n", i, status);
-                i++;
-		if (i == NUM_SIZES)
-               	break;
-	}
-	sleep(2);
+	recv (ep1,status,MCAPI_SUCCESS);
+	if (status != MCAPI_SUCCESS) { WRONG }
+	else {pass_num++;}
+
+         printf("CoreA : message recv. %d The %d time receiving , status %d\n", avail, i, status);
   }
 
   mcapi_endpoint_delete(ep1,&status);
