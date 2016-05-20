@@ -1,0 +1,7 @@
+a resources repository required to run the mcapi audio demo.
+
+qt-src: source code for the 3band EQ tunnining graphical user interface
+pointercal: a typical touchscreen calibration result
+go: script to run the demo
+ 
+  

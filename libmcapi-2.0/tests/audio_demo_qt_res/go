@@ -1,0 +1,18 @@
+#!/bin/sh
+
+cd /sys/class/gpio/
+echo 102 > export
+cd gpio102
+echo high > direction
+
+
+export QWS_MOUSE_PROTO=tslib
+export TSLIB_FBDEVICE=/dev/fb0
+export TSLIB_CONSOLEDEVICE=none
+export TSLIB_CONFFILE=/etc/ts.conf
+export TSLIB_CALIBFILE=/etc/pointercal
+export TSLIB_TSDEVICE=/dev/input/event0
+
+#ts_calibrate
+
+/demo/qt -qws
