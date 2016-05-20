@@ -1,6 +1,5 @@
-/* Test: msg1
-Description: Tests simple blocking msgsend and msgrecv calls to several endpoints
-on a single node 
+/*
+    send audio playing back parameter to SHARC 
 */
 
 #include <mcapi.h>
@@ -55,10 +54,13 @@ static void show_usage(int exit_status)
         exit(exit_status);
 }
 
-#define GETOPT_FLAGS "v:h"
+#define GETOPT_FLAGS "v:b:m:t:h"
 #define a_argument required_argument
 static struct option const long_opts[] = {
         {"volume",        no_argument, NULL, 'v'},
+        {"bass",        no_argument, NULL, 'b'},
+        {"mid",        no_argument, NULL, 'm'},
+        {"treble",        no_argument, NULL, 't'},
         {"help",        no_argument, NULL, 'h'},
         {NULL,          no_argument, NULL, 0x0}
 };
@@ -72,7 +74,7 @@ int main (int argc, char **argv) {
 	int i,s = 0, rc = 0,pass_num=0;
 	mcapi_uint_t avail;
 	int c;
-	int vol;
+	int vol, bass, mid, treb;
 	struct mcapi_audio_cmd *cmd;
 	mcapi_request_t request;
 
@@ -83,11 +85,9 @@ int main (int argc, char **argv) {
 	/* create endpoints */
 	ep1 = mcapi_endpoint_create(MASTER_PORT_NUM1,&status);
 	if (status != MCAPI_SUCCESS) { WRONG }
-	printf("ep1 %x   \n", ep1);
 
 	ep2 = mcapi_endpoint_get (DOMAIN,SLAVE_NODE_NUM,SLAVE_PORT_NUM1,MCA_INFINITE,&status);
 	if (status != MCAPI_SUCCESS) { WRONG }
-	printf("ep2 %x   \n", ep2);
 
 	/* send and recv messages on the endpoints */
 	/* regular endpoints */
@@ -97,11 +97,20 @@ int main (int argc, char **argv) {
 		switch (c) {
 			case 'v':
 				vol = atoi(optarg);
-				printf("%s %d\n", argv[0], vol);
 				cmd->cmd_head = MCAPI_AUDIO_VOL;
-				cmd->nargs = 2;
 				cmd->arg0 = vol;
-				cmd->arg1 = vol;
+				break;
+			case 'b':
+				bass = atoi(optarg);
+				cmd->arg1 = bass;
+				break;
+			case 'm':
+				mid = atoi(optarg);
+				cmd->arg2 = mid;
+				break;
+			case 't':
+				treb = atoi(optarg);
+				cmd->arg3 = treb;
 				break;
 			case 'h':
 				show_usage(1);
@@ -115,9 +124,13 @@ int main (int argc, char **argv) {
 
 	mcapi_msg_send_i(ep1, ep2, cmd_buf, sizeof(struct mcapi_audio_cmd), 1, &request, &status);
 	if (status != MCAPI_SUCCESS) { WRONG }
-	printf("core 0: Sending audio cmd%x %x %x %x\n", cmd->cmd_head, cmd->nargs, cmd->arg0, cmd->arg1);
+
+	printf("  griffin in tuning the sound\n");
+
 
 	cmd = (struct mcapi_audio_cmd*)ret_buf;
+
+	static int count = 0;
 
 	while (1) {
 		avail = mcapi_msg_available(ep1, &status);
@@ -130,7 +143,10 @@ int main (int argc, char **argv) {
        	        		printf("Core 0 : Audio cmd failed by core 1. ret=%d\n", cmd->ret);
 	               	break;
 		}
-		sleep(1);
+	
+		count ++;
+		if(count>1)
+			break;
 	}
 
 
