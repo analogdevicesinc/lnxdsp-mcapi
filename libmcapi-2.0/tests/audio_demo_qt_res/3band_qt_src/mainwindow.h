@@ -30,7 +30,7 @@ public:
     //QSpinBox *spinBox;
     QSlider *slider;
     QPushButton *pop;
-    QPushButton *Joz;
+    QPushButton *Jaz;
     QPushButton *Rock;
     QFont P;
     QFont J;

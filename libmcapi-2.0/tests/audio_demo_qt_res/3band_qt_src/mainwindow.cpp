@@ -63,7 +63,7 @@ Main::Main(QWidget *parent)
 
 //connection between sliders and styles
      QObject::connect(nextPage->pop, SIGNAL(clicked()), this, SLOT(popaction()));
-     QObject::connect(nextPage->Joz, SIGNAL(clicked()), this, SLOT(midaction()));
+     QObject::connect(nextPage->Jaz, SIGNAL(clicked()), this, SLOT(midaction()));
      QObject::connect(nextPage->Rock, SIGNAL(clicked()),this, SLOT(trebleaction()));
 
 //next button for the second page
@@ -204,12 +204,13 @@ Nextpage::Nextpage(QWidget *parent):QDialog(parent)
       P.setPointSize(40);
       pop->setFont(P);
 
-      Joz = new QPushButton("J",this);
-      Joz->setFixedSize(100,100);
+      Jaz = new QPushButton("J",this);
+      Jaz->setFixedSize(100,100);
       QFont J;
       J.setPointSize(40);
-      Joz->setFont(J);
-
+      Jaz->setFont(J);
+      
+      Rock = new QPushButton("R",this);
       Rock->setFixedSize(100,100);
       QFont R;
       R.setPointSize(40);
@@ -231,7 +232,7 @@ Nextpage::Nextpage(QWidget *parent):QDialog(parent)
       toplayout =new QGridLayout;
 
       toplayout->addWidget(pop,3,2,3,3);
-      toplayout->addWidget(Joz,3,5,3,3);
+      toplayout->addWidget(Jaz,3,5,3,3);
       toplayout->addWidget(Rock,3,8,3,3);
 
       toplayout->addWidget(back,5,9,1,1);
