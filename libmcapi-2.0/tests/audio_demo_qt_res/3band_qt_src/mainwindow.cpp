@@ -1,11 +1,18 @@
 #include "mainwindow.h"
-
+#include <QMessageBox>
+#include <QHostAddress>
+#include <stdint.h>
 
 Main::Main(QWidget *parent)
 {
     setWindowTitle("Main");
+    port =9734;    
+    QString ipAddress;
+    if (ipAddress.isEmpty())
+        ipAddress = QHostAddress(QHostAddress::LocalHost).toString();
 
-    p = new QProcess(this);
+    tcpSocket = new QTcpSocket(this);
+    tcpSocket->connectToHost(QHostAddress(ipAddress), port);
     nextPage = new Nextpage(this);
 
     QFont bq;
@@ -75,10 +82,10 @@ Main::Main(QWidget *parent)
      QObject::connect(nextPage->slider, SIGNAL(valueChanged(int)), slider, SLOT(setValue(int)));
 
 //value change on any slider will trigger
-     QObject::connect(slider, SIGNAL(valueChanged(int)), this, SLOT(openProcess1()));
-     QObject::connect(bass, SIGNAL(valueChanged(int)), this, SLOT(openProcess1()));
-     QObject::connect(mid, SIGNAL(valueChanged(int)), this, SLOT(openProcess1()));
-     QObject::connect(treble, SIGNAL(valueChanged(int)), this, SLOT(openProcess1()));
+     QObject::connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sendmsg()));
+     QObject::connect(bass, SIGNAL(valueChanged(int)), this, SLOT(sendmsg()));
+     QObject::connect(mid, SIGNAL(valueChanged(int)), this, SLOT(sendmsg()));
+     QObject::connect(treble, SIGNAL(valueChanged(int)), this, SLOT(sendmsg()));
 
 //layout
      toplayout = new QGridLayout;
@@ -114,24 +121,29 @@ Main::~Main()
 }
 
 
-void Main::openProcess1()
+
+void Main::sendmsg()
  {
+    v=slider->value();
+    b=bass->value();
+    m=mid->value();
+    t=treble->value();
+    QString p1 = QString("%1").arg(v);
+    QString p2= QString("%1").arg(b);
+    QString p3 = QString("%1").arg(m);
+    QString p4= QString("%1").arg(t);
 
-     v=slider->value();
-     b=bass->value();
-     m=mid->value();
-     t=treble->value();
-
-     QString p1 = QString("%1").arg(v);
-     QString p2= QString("%1").arg(b);
-     QString p3 = QString("%1").arg(m);
-     QString p4= QString("%1").arg(t);
-
-     p->start("/demo/stune",QStringList()<<"-v"<<p1<<"-b"<<p2<<"-m"<<p3<<"-t"<<p4);
-
-    connect(p, SIGNAL(finished(int)), this, SLOT(readResult(int)));
+    QString msg = "-v"+p1+"-b"+p2+"-m"+p3+"-t"+p4;
+     int length=0;
+     if(msg=="")
+     {
+       return;
+     }
+    if((length=tcpSocket->write(msg.toLatin1(),msg.length()))!=msg.length())
+     {
+       return;
+     }
  }
-
 
 void Main::readResult(int exitCode)
 {

@@ -4,7 +4,7 @@
 
 #include <QtGui>
 #include <QWidget>
-
+#include <QTcpSocket>
 //***************************************************************************************************
 
 class QHBoxLayout;
@@ -75,8 +75,7 @@ public:
 
 private slots:
 
-    void openProcess1();
-
+    void sendmsg();
     void nextpage();
     void readResult(int exitCode);
     void popaction();
@@ -101,6 +100,8 @@ private:
     int m;
     int t;
 
+    int port;
+    QTcpSocket *tcpSocket;
 };
 
 #endif // MAIN_H
