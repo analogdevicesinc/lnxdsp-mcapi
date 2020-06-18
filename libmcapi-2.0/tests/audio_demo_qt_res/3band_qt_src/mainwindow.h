@@ -1,4 +1,6 @@
-
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 #ifndef MAIN_H
 #define MAIN_H
 

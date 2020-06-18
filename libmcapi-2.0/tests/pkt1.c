@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: pkt4
    Description: Tests simple out-of-order non-blocking pkt_channel_send and 
    pkt_channel_recv calls to two endpoints on asingle node.  This is a 

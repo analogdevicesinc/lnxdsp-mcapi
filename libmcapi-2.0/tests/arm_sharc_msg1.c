@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: msg1
    Description: Tests simple blocking msgsend and msgrecv calls to several endpoints
    on a single node 

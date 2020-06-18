@@ -1,4 +1,7 @@
 /*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
+/*
  * mca.h
  * Version 1.131, May 2010
 */

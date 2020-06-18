@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 #ifndef _MCAPI_DEV_IMPL_H_
 #define _MCAPI_DEV_IMPL_H_
 #include <stdint.h>

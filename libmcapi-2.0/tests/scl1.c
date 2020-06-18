@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: scl1
    Description: Tests scl_channel_send and scl_channel_recv calls on single node.  
    Note, that for scalar channels we only have blocking versions of send/recv.

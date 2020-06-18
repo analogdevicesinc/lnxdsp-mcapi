@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: msg2
    Description: Tests msg send/recv under two processes situation..  
    It tests all error conditions.  
