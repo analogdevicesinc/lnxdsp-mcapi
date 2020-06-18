@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: pkt2
    Description: Tests pkt transition with two processes on at the same time.  
    This test tests send/recv to several endpoints on the same node.  It tests

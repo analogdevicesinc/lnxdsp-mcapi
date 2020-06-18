@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: bmp2jpg 
    Description: bmp to jpg encoding demo coreA part
 */

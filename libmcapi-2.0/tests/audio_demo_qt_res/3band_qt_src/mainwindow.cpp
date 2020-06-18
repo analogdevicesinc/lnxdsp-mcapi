@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 #include "mainwindow.h"
 #include <QMessageBox>
 #include <QHostAddress>

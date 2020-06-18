@@ -1,3 +1,6 @@
+/*
+ ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
+*/
 /* Test: endpoints1
    Description: Tests creating and getting endpoints on a single node.  Tests all 
    error conditions.  For invalid endpoints, it has to use the non-blocking get_endpoint_i,
