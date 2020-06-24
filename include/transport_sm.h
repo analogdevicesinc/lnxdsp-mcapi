@@ -93,7 +93,8 @@ typedef struct {
   mca_boolean_t cancelled;
   mcapi_endpoint_t handle;
   mca_status_t status;
-  mcapi_endpoint_t* ep_endpoint;
+  mcapi_endpoint_t ep_endpoint;
+  uint32_t payload;   /* used only for send_i */
 } mcapi_request_data;
 
 typedef struct  {

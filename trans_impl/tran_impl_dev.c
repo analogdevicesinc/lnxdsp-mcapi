@@ -93,48 +93,68 @@ int sm_close_session(uint32_t session_idx)
 	return ret;
 }
 
-int sm_send_packet(uint32_t session_idx, uint32_t dst_ep,
-		uint32_t dst_cpu, void *buf, uint32_t len)
+int sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
+		void *buf, uint32_t len, uint32_t *payload, int blocking)
 {
 	int ret;
+	int flags;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
 	pkt.buf_len = len;
 	pkt.buf = buf;
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
 	ret = ioctl(fd, CMD_SM_SEND, &pkt);
+	if (payload)
+		*payload = pkt.payload;
 	return ret;
 }
 
-int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu, void *buf,
-		uint32_t *len)
+int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu,
+		void *buf, uint32_t *len, int blocking)
 {
-	int ret;
+	int ret = 0;
+	int flags;
 	memset(&pkt, 0, sizeof(pkt));
-	printf("session_idx %d\n", session_idx);
 	pkt.session_idx = session_idx;
 	if (buf)
 		pkt.buf = buf;
 	else
 		return -EINVAL;
-	pkt.buf_len = len;
-	ret = ioctl(fd, CMD_SM_RECV, &pkt);
-	if (ret)
-		return ret;
-	if (dst_ep)
-		*dst_ep = pkt.remote_ep;
-	if (dst_cpu)
-		*dst_cpu = pkt.dst_cpu;
 	if (len)
-		*len = pkt.buf_len;
-	return 0;
+		pkt.buf_len = *len;
+
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
+	ret = ioctl(fd, CMD_SM_RECV, &pkt);
+	if (!ret) {
+		if (dst_ep)
+			*dst_ep = pkt.remote_ep;
+		if (dst_cpu)
+			*dst_cpu = pkt.dst_cpu;
+		if (len)
+			*len = pkt.buf_len;
+	}
+	return ret;
 }
 
-int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
-		uint16_t dst_cpu, uint32_t scalar0, uint32_t scalar1, uint32_t size)
+int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep, uint16_t dst_cpu,
+		uint32_t scalar0, uint32_t scalar1, uint32_t size, int blocking)
 {
 	int ret;
+	int flags;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
@@ -156,20 +176,32 @@ int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep,
 		pkt.type = SM_SESSION_SCALAR_READY_64;
 		break;
 	}
-
-	printf("%s size %d type %x \n", __func__, size, pkt.type);
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
 	ret = ioctl(fd, CMD_SM_SEND, &pkt);
 	return ret;
 }
 
-int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, uint32_t *scalar0,
-		uint32_t *scalar1, uint32_t *size)
+int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu,
+		uint32_t *scalar0, uint32_t *scalar1, uint32_t *size, int blocking)
 {
 	int ret = 0;
+	int flags;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.session_idx = session_idx;
 	pkt.type = SM_SESSION_SCALAR_READY_64;
-
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
 	ret = ioctl(fd, CMD_SM_RECV, &pkt);
 	if (ret)
 		return ret;
@@ -183,8 +215,26 @@ int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu, ui
 		*scalar1 = pkt.buf_len;
 	if (size)
 		*size = pkt.type;
-
 	return 1;
+}
+
+int sm_get_remote_ep(uint32_t dst_ep, uint32_t dst_cpu, int timeout, int blocking)
+{
+	int ret;
+	int flags;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.remote_ep = dst_ep;
+	pkt.dst_cpu = dst_cpu;
+	pkt.timeout = timeout;
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
+	ret = ioctl(fd, CMD_SM_QUERY_REMOTE_EP, &pkt);
+	return ret;
 }
 
 int sm_get_session_status(uint32_t session_idx, struct sm_session_status *status)
@@ -198,10 +248,36 @@ int sm_get_session_status(uint32_t session_idx, struct sm_session_status *status
 	pkt.param = status;
 	pkt.param_len = sizeof(*status);
 	ret = ioctl(fd, CMD_SM_GET_SESSION_STATUS, &pkt);
-
 	return ret;
 }
 
+int sm_wait_nonblocking(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
+	void *buf, uint32_t *len, uint32_t type, uint32_t payload, unsigned int timeout, int blocking)
+{
+	int ret;
+	int flags;
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.session_idx = session_idx;
+	pkt.remote_ep = dst_ep;
+	pkt.dst_cpu = dst_cpu;
+	pkt.buf = buf;
+	pkt.type = type;
+	pkt.timeout = timeout;
+	pkt.payload = payload;
+	if (len)
+		pkt.buf_len = *len;
+	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
+		if (blocking)
+			flags &= ~O_NONBLOCK;
+		else
+			flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
+	ret = ioctl(fd, CMD_SM_WAIT, &pkt);
+	if (len)
+		*len = pkt.buf_len;
+	return ret;
+}
 
 int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_pending, uint32_t *nfree)
 {

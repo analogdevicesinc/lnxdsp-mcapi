@@ -575,9 +575,9 @@ mcapi_endpoint_t mcapi_endpoint_get(
   } else if ( ! mcapi_trans_valid_port (port_id)) {
     *mcapi_status = MCAPI_ERR_PORT_INVALID;
   } else {
-    mcapi_trans_endpoint_get (&e,domain_id,node_id,port_id);
+    mcapi_trans_endpoint_get (&e,domain_id,node_id,port_id,mcapi_status,timeout);
   }
-  
+
   return e;
 }
 
@@ -803,9 +803,8 @@ void mcapi_msg_send(
     *mcapi_status = MCAPI_ERR_ENDP_INVALID; /* FIXME (errata A1) */
   } else if (buffer_size > MCAPI_MAX_MSG_SIZE) {
     *mcapi_status = MCAPI_ERR_MSG_LIMIT;
-  } else if ( !mcapi_trans_msg_send (send_endpoint,receive_endpoint,buffer,buffer_size)) {
-    /* assume couldn't get a buffer */
-    *mcapi_status = MCAPI_ERR_MEM_LIMIT;
+  } else {
+	mcapi_trans_msg_send (send_endpoint,receive_endpoint,buffer,buffer_size, mcapi_status);
   } 
 }
 
@@ -938,12 +937,11 @@ void mcapi_msg_recv(
     *mcapi_status = MCAPI_ERR_PARAMETER;
   } else if (!mcapi_trans_valid_endpoint(receive_endpoint)) {
     *mcapi_status = MCAPI_ERR_ENDP_INVALID;
-  } else {
-    mcapi_trans_msg_recv(receive_endpoint,buffer,buffer_size,received_size);
-    if (*received_size > buffer_size) {
-      *received_size = buffer_size;
-      *mcapi_status = MCAPI_ERR_MSG_TRUNCATED;
-    }  
+  } else if (mcapi_trans_msg_recv(receive_endpoint,buffer,buffer_size,received_size, mcapi_status)) {
+	if (*received_size > buffer_size) {
+	  *received_size = buffer_size;
+	  *mcapi_status = MCAPI_ERR_MSG_TRUNCATED;
+	}
   }
 }
 
@@ -993,7 +991,7 @@ mcapi_uint_t mcapi_msg_available(
   if( !mcapi_trans_valid_endpoint(receive_endpoint)) {
     *mcapi_status = MCAPI_ERR_ENDP_INVALID;
   } else {
-    rc = mcapi_trans_msg_available(receive_endpoint);
+    rc = mcapi_trans_msg_available(receive_endpoint, mcapi_status);
   }
   return rc;
 }
@@ -1059,6 +1057,10 @@ void mcapi_pktchan_connect_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
   /* MCAPI_ENO_REQUEST handled at the transport layer */
   
   *mcapi_status = MCAPI_SUCCESS;
@@ -1142,7 +1144,11 @@ void mcapi_pktchan_recv_open_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status) 
 {
-  
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;   
   if (! request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1219,7 +1225,11 @@ void mcapi_pktchan_send_open_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS; 
   if (! request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1296,6 +1306,11 @@ void mcapi_pktchan_send_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   /* MCAPI_ERR_MEM_LIMIT, MCAPI_ENO_REQUEST and MCAPI_ERR_MEM_LIMIT handled at the transport layer */
   *mcapi_status = MCAPI_SUCCESS; 
   if (!request) {
@@ -1361,7 +1376,11 @@ void mcapi_pktchan_send(
  	MCAPI_IN size_t size, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS; 
   if (! mcapi_trans_valid_pktchan_send_handle(send_handle) ) {
     *mcapi_status = MCAPI_ERR_CHAN_INVALID;
@@ -1429,7 +1448,12 @@ void mcapi_pktchan_recv_i(
  	MCAPI_OUT void** buffer, 
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
-{ 
+{
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   /* MCAPI_EPACKLIMIT, MCAPI_ERR_MEM_LIMIT, and MCAPI_ENO_REQUEST are handled at the transport layer */
   *mcapi_status = MCAPI_SUCCESS; 
   if (! request) {
@@ -1495,7 +1519,11 @@ void mcapi_pktchan_recv(
  	MCAPI_OUT size_t* received_size, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;   
   if (! mcapi_trans_valid_buffer_param(buffer)) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1553,13 +1581,18 @@ mcapi_uint_t mcapi_pktchan_available(
  	MCAPI_IN mcapi_pktchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status) 
 {
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return MCAPI_NULL;
+
   int num = 0;
   
   *mcapi_status = MCAPI_SUCCESS;
   if (! mcapi_trans_valid_pktchan_recv_handle(receive_handle) ) {
     *mcapi_status = MCAPI_ERR_CHAN_INVALID;
   } else {
-    num = mcapi_trans_pktchan_available(receive_handle);
+    num = mcapi_trans_pktchan_available(receive_handle, mcapi_status);
   }
 return num;
 }
@@ -1591,6 +1624,10 @@ void mcapi_pktchan_release(
         /*MCAPI_IN*/ void* buffer,
         MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
 
     *mcapi_status = MCAPI_SUCCESS;
     if (!mcapi_trans_pktchan_free (buffer)) {
@@ -1675,7 +1712,11 @@ void mcapi_pktchan_recv_close_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;  
   if (! request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1741,6 +1782,11 @@ void mcapi_pktchan_send_close_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: pktchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;
   if (!request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1816,7 +1862,11 @@ void  mcapi_sclchan_connect_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;
   if (!request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1890,6 +1940,11 @@ void mcapi_sclchan_recv_open_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status) 
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;  
   if (!request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -1962,7 +2017,11 @@ void mcapi_sclchan_send_open_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-  
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;  
   if (!request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -2014,6 +2073,11 @@ void mcapi_sclchan_send_uint64(
 		MCAPI_IN mcapi_uint64_t dataword,
 		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+	/* Note: sclchan is not supported now. */
+	*mcapi_status = MCAPI_ERR_GENERAL;
+	printf("%s is not supported.\n", __func__);
+	return;
+
 	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
 	*mcapi_status = MCAPI_SUCCESS;
 	if (! mcapi_trans_valid_sclchan_send_handle(send_handle) ) {
@@ -2062,6 +2126,11 @@ void mcapi_sclchan_send_uint32(
 		MCAPI_IN mcapi_uint32_t dataword,
 		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+	/* Note: sclchan is not supported now. */
+	*mcapi_status = MCAPI_ERR_GENERAL;
+	printf("%s is not supported.\n", __func__);
+	return;
+
 	uint64_t tmp = (uint64_t)dataword;
 	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
 	if (! mcapi_trans_valid_status_param(mcapi_status)) {
@@ -2114,6 +2183,11 @@ void mcapi_sclchan_send_uint16(
 		MCAPI_IN mcapi_uint16_t dataword,
 		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+	/* Note: sclchan is not supported now. */
+	*mcapi_status = MCAPI_ERR_GENERAL;
+	printf("%s is not supported.\n", __func__);
+	return;
+
 	uint64_t tmp = (uint64_t)dataword;
 	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
 	*mcapi_status = MCAPI_SUCCESS;
@@ -2159,6 +2233,11 @@ void mcapi_sclchan_send_uint8(
 		MCAPI_IN mcapi_uint8_t dataword,
 		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+	/* Note: sclchan is not supported now. */
+	*mcapi_status = MCAPI_ERR_GENERAL;
+	printf("%s is not supported.\n", __func__);
+	return;
+
 	uint64_t tmp = (uint64_t)dataword;
 	/* FIXME: (errata B3) this function needs to check MCAPI_ERR_MEM_LIMIT */
 	*mcapi_status = MCAPI_SUCCESS;
@@ -2205,6 +2284,11 @@ mcapi_uint64_t mcapi_sclchan_recv_uint64(
  	MCAPI_IN mcapi_sclchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return 0;
+
   uint64_t dataword = 0;
   uint32_t exp_size = 8; 
   
@@ -2253,6 +2337,11 @@ mcapi_uint32_t mcapi_sclchan_recv_uint32(
  	MCAPI_IN mcapi_sclchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return 0;
+
   uint64_t dataword = 0;
   uint32_t exp_size = 4; 
   
@@ -2302,6 +2391,10 @@ mcapi_uint16_t mcapi_sclchan_recv_uint16(
  	MCAPI_IN mcapi_sclchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return 0;
 
   uint64_t dataword = 0;
   uint32_t exp_size = 2; 
@@ -2352,6 +2445,11 @@ mcapi_uint8_t mcapi_sclchan_recv_uint8(
  	MCAPI_IN mcapi_sclchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return 0;
+
   uint64_t dataword = 0;
   uint32_t exp_size = 1; 
   
@@ -2401,13 +2499,18 @@ mcapi_uint_t mcapi_sclchan_available (
  	MCAPI_IN mcapi_sclchan_recv_hndl_t receive_handle, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return MCAPI_NULL;
+
   int num = 0;
   
   *mcapi_status = MCAPI_SUCCESS; 
   if (! mcapi_trans_valid_sclchan_recv_handle(receive_handle) ) {
     *mcapi_status = MCAPI_ERR_CHAN_INVALID;
   } else {
-    num = mcapi_trans_sclchan_available_i(receive_handle);
+    num = mcapi_trans_sclchan_available_i(receive_handle, mcapi_status);
   }
   return num;
 }
@@ -2457,6 +2560,10 @@ void mcapi_sclchan_recv_close_i(
 	MCAPI_OUT mcapi_request_t* request, 
 	MCAPI_OUT mcapi_status_t* mcapi_status) 
 {
+	/* Note: sclchan is not supported now. */
+	*mcapi_status = MCAPI_ERR_GENERAL;
+	printf("%s is not supported.\n", __func__);
+	return;
 
     *mcapi_status = MCAPI_SUCCESS;
     if (!request) {
@@ -2522,6 +2629,11 @@ void mcapi_sclchan_send_close_i(
  	MCAPI_OUT mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: sclchan is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS;   
   if (!request) {
     *mcapi_status = MCAPI_ERR_PARAMETER;
@@ -2574,7 +2686,7 @@ mcapi_boolean_t mcapi_test(
 		MCAPI_OUT size_t* size,
 		MCAPI_OUT mcapi_status_t* mcapi_status)
 {
-	mcapi_boolean_t rc = MCAPI_FALSE;
+  mcapi_boolean_t rc = MCAPI_FALSE;
   *mcapi_status = MCAPI_SUCCESS;
  
   if (! mcapi_trans_valid_size_param(size)) {
@@ -2713,6 +2825,11 @@ MCAPI_ERR_PARAMETER	Incorrect number (if  =  0), requests or size parameter.
                                      MCAPI_IN mcapi_timeout_t timeout,
                                      MCAPI_OUT mcapi_status_t* mcapi_status) 
 {
+  /* Note: this API is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return MCAPI_RETURN_VALUE_INVALID;
+
   unsigned int rc = MCAPI_RETURN_VALUE_INVALID; 
   
   *mcapi_status = MCAPI_SUCCESS; 
@@ -2755,6 +2872,11 @@ void mcapi_cancel(
  	MCAPI_IN mcapi_request_t* request, 
  	MCAPI_OUT mcapi_status_t* mcapi_status)
 {
+  /* Note: this API is not supported now. */
+  *mcapi_status = MCAPI_ERR_GENERAL;
+  printf("%s is not supported.\n", __func__);
+  return;
+
   *mcapi_status = MCAPI_SUCCESS; 
     if (!mcapi_trans_valid_request_handle(request)) {
     *mcapi_status = MCAPI_ERR_REQUEST_INVALID;
