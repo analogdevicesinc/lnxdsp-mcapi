@@ -1,6 +1,8 @@
 /*
  ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
 */
+
+#include <tls.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -14,7 +16,6 @@
 #include <icc.h>
 #include <assert.h>
 
-struct sm_packet pkt;
 int fd;
 extern mcapi_database* c_db;
 
@@ -35,6 +36,8 @@ void sm_dev_finalize()
 int sm_create_session(uint32_t src_ep, uint32_t type)
 {
 	int ret;
+	struct sm_packet pkt;
+
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.local_ep = src_ep;
 	pkt.type = type;
@@ -45,7 +48,9 @@ int sm_create_session(uint32_t src_ep, uint32_t type)
 int sm_destroy_session(uint32_t session_idx)
 {
 	int ret;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	ret = ioctl(fd, CMD_SM_SHUTDOWN, &pkt);
 	return ret;
@@ -54,7 +59,9 @@ int sm_destroy_session(uint32_t session_idx)
 int sm_connect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu, uint32_t type)
 {
 	int ret;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -66,7 +73,9 @@ int sm_connect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu, 
 int sm_disconnect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu)
 {
 	int ret;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -77,7 +86,9 @@ int sm_disconnect_session(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cp
 int sm_open_session(uint32_t session_idx)
 {
 	int ret;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	ret = ioctl(fd, CMD_SM_OPEN, &pkt);
 	return ret;
@@ -86,7 +97,9 @@ int sm_open_session(uint32_t session_idx)
 int sm_close_session(uint32_t session_idx)
 {
 	int ret;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	ret = ioctl(fd, CMD_SM_CLOSE, &pkt);
 	return ret;
@@ -97,7 +110,9 @@ int sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 {
 	int ret;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -121,7 +136,9 @@ int sm_recv_packet(uint32_t session_idx, uint16_t *dst_ep, uint16_t *dst_cpu,
 {
 	int ret = 0;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	if (buf)
 		pkt.buf = buf;
@@ -154,7 +171,9 @@ int sm_send_scalar(uint32_t session_idx, uint16_t dst_ep, uint16_t dst_cpu,
 {
 	int ret;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -191,7 +210,9 @@ int sm_recv_scalar(uint32_t session_idx, uint16_t *src_ep, uint16_t *src_cpu,
 {
 	int ret = 0;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.type = SM_SESSION_SCALAR_READY_64;
 	if (flags = fcntl(fd, F_GETFL, 0) > 0) {
@@ -221,7 +242,9 @@ int sm_get_remote_ep(uint32_t dst_ep, uint32_t dst_cpu, int timeout, int blockin
 {
 	int ret;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
 	pkt.timeout = timeout;
@@ -239,6 +262,8 @@ int sm_get_remote_ep(uint32_t dst_ep, uint32_t dst_cpu, int timeout, int blockin
 int sm_get_session_status(uint32_t session_idx, struct sm_session_status *status)
 {
 	int ret;
+	struct sm_packet pkt;
+
 	if (!status)
 		return -EINVAL;
 	memset(&pkt, 0, sizeof(struct sm_packet));
@@ -255,7 +280,9 @@ int sm_wait_nonblocking(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 {
 	int ret;
 	int flags;
-	memset(&pkt, 0, sizeof(pkt));
+	struct sm_packet pkt;
+
+	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.session_idx = session_idx;
 	pkt.remote_ep = dst_ep;
 	pkt.dst_cpu = dst_cpu;
@@ -272,6 +299,7 @@ int sm_wait_nonblocking(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 			flags |= O_NONBLOCK;
 		fcntl(fd, F_SETFL, flags);
 	}
+
 	ret = ioctl(fd, CMD_SM_WAIT, &pkt);
 	if (len)
 		*len = pkt.buf_len;
@@ -281,7 +309,9 @@ int sm_wait_nonblocking(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_pending, uint32_t *nfree)
 {
 	int ret;
+	struct sm_packet pkt;
 	struct sm_node_status param;
+
 	memset(&pkt, 0, sizeof(struct sm_packet));
 	memset(&param, 0, sizeof(param));
 	pkt.param = &param;
@@ -300,6 +330,8 @@ int sm_get_node_status(uint32_t node, uint32_t *session_mask, uint32_t *session_
 void *sm_request_uncached_buf(uint32_t size, uint32_t *paddr)
 {
 	int ret;
+	struct sm_packet pkt;
+
 	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.type = CMD_SM_REQUEST_UNCACHED_BUF;
 	pkt.buf_len = size;
@@ -315,6 +347,8 @@ void *sm_request_uncached_buf(uint32_t size, uint32_t *paddr)
 int sm_release_uncached_buf(void *buf, uint32_t size, uint32_t paddr)
 {
 	int ret;
+	struct sm_packet pkt;
+
 	memset(&pkt, 0, sizeof(struct sm_packet));
 	pkt.type = CMD_SM_RELEASE_UNCACHED_BUF;
 	pkt.buf_len = size;
