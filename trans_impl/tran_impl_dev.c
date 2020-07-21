@@ -2,7 +2,6 @@
  ** Copyright (c) 2019, Analog Devices, Inc.  All rights reserved.
 */
 
-#include <tls.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
