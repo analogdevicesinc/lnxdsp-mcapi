@@ -34,9 +34,11 @@ scl2_LDADD      = $(top_builddir)/libmcapi.la
 cces_msg1_SOURCES    = cces_msg1.c
 cces_msg1_LDADD      = $(top_builddir)/libmcapi.la
 
+arm_sharc_msg_demo_LDFLAGS    = -lpthread
 arm_sharc_msg_demo_SOURCES    = arm_sharc_msg_demo.c
 arm_sharc_msg_demo_LDADD      = $(top_builddir)/libmcapi.la
 
+arm_sharc_msg_test_LDFLAGS    = -lpthread
 arm_sharc_msg_test_SOURCES    = arm_sharc_msg_test.c
 arm_sharc_msg_test_LDADD      = $(top_builddir)/libmcapi.la
 
